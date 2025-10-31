@@ -1,4 +1,5 @@
-import type { DataQuery, DataSourceJsonData } from '@grafana/data';
+import type { DataSourceJsonData } from '@grafana/data';
+import type { DataQuery } from '@grafana/schema';
 
 export interface OrcaDataSourceOptions extends DataSourceJsonData {
   // We won't show this in the UI; backend will default if empty.

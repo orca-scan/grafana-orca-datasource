@@ -68,7 +68,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
   }
 
   private toDataFrames(query: OrcaQuery, response: OrcaQueryResponse): DataFrame[] {
-    const rows: Record<string, any>[] = Array.isArray(response?.rows) ? response.rows : [];
+    const rows: Array<Record<string, any>> = Array.isArray(response?.rows) ? response.rows : [];
     const timeField = response?.timeField ?? query.timeField;
     const fieldInfos: OrcaFieldInfo[] =
       Array.isArray(response?.fields) && response.fields.length
@@ -135,7 +135,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
     return [frame];
   }
 
-  private buildFallbackFields(rows: Record<string, any>[], timeField?: string): OrcaFieldInfo[] {
+  private buildFallbackFields(rows: Array<Record<string, any>>, timeField?: string): OrcaFieldInfo[] {
     const seen = new Set<string>();
     const order: OrcaFieldInfo[] = [];
     const decimalsMap = this.computeDecimalMap(rows);
@@ -201,7 +201,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
     return order;
   }
 
-  private computeDecimalMap(rows: Record<string, any>[]): Record<string, number> {
+  private computeDecimalMap(rows: Array<Record<string, any>>): Record<string, number> {
     const result: Record<string, number> = {};
     for (const row of rows) {
       for (const [key, value] of Object.entries(row)) {
@@ -217,7 +217,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
     return result;
   }
 
-  private detectGeoInfo(rows: Record<string, any>[]): Record<string, { latDecimals: number; lonDecimals: number }> {
+  private detectGeoInfo(rows: Array<Record<string, any>>): Record<string, { latDecimals: number; lonDecimals: number }> {
     const info: Record<string, { latDecimals: number; lonDecimals: number }> = {};
     for (const row of rows) {
       for (const [key, value] of Object.entries(row)) {
@@ -266,7 +266,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
     return undefined;
   }
 
-  private detectFallbackType(rows: Record<string, any>[], key: string): OrcaGrafanaType {
+  private detectFallbackType(rows: Array<Record<string, any>>, key: string): OrcaGrafanaType {
     const maxSamples = 200;
     let evaluated = 0;
     let numeric = true;
