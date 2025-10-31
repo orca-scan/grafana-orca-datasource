@@ -1,26 +1,30 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "Orca Scan",
   "id": "orcascan-orcascan-datasource",
-  "metrics": true,
+  "name": "Orca Scan",
   "backend": true,
   "executable": "gpx_orca_scan",
+
+  "metrics": true,
+  "logs": false,
+  "annotations": false,
+  "includes": [],
+
   "info": {
-    "description": "",
-    "author": {
-      "name": "Orca scan"
-    },
-    "keywords": ["datasource"],
-    "logos": {
-      "small": "img/logo.svg",
-      "large": "img/logo.svg"
-    },
-    "links": [],
+    "description": "Query Orca Scan sheets via REST API. Paste your API key, pick a sheet, build dashboards. Multiple Orca accounts supported via multiple data source instances.",
+    "author": { "name": "Orca Scan", "url": "https://orcascan.com" },
+    "keywords": ["orcascan", "barcode", "sheets", "http"],
+    "logos": { "small": "img/logo.svg", "large": "img/logo.svg" },
+    "links": [
+      { "name": "Guide", "url": "https://orcascan.com/guides/rest-api-f09a21c3" },
+      { "name": "Support", "url": "https://orcascan.com/contact" }
+    ],
     "screenshots": [],
-    "version": "%VERSION%",
+    "version": "1.0.0",
     "updated": "%TODAY%"
   },
+
   "dependencies": {
     "grafanaDependency": ">=10.4.0",
     "plugins": []

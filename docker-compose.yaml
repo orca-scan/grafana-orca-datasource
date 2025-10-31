@@ -1,5 +1,12 @@
 services:
   grafana:
-    extends:
-      file: .config/docker-compose-base.yaml
-      service: grafana
+    image: grafana/grafana:10.4.6
+    ports:
+      - '3000:3000'
+    environment:
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=orcascan-orcascan-datasource
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/orcascan-orcascan-datasource
+      - grafana-storage:/var/lib/grafana
+volumes:
+  grafana-storage: {}
