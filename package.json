@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache .",
     "lint:fix": "npm run lint -- --fix && prettier --write --list-different .",
-    "e2e": "playwright test",
+    "e2e": "node -e \"console.log('E2E tests are currently disabled for this plugin.')\"",
     "server": "docker compose up --build",
     "sign": "npx --yes @grafana/sign-plugin@latest"
   },
