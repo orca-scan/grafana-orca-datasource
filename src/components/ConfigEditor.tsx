@@ -1,71 +1,43 @@
-import React, { ChangeEvent } from 'react';
-import { InlineField, Input, SecretInput } from '@grafana/ui';
-import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions, MySecureJsonData } from '../types';
+import React from 'react';
+import type { DataSourcePluginOptionsEditorProps } from '@grafana/data';
+import { InlineField, SecretInput, Stack } from '@grafana/ui';
+import type { OrcaDataSourceOptions, OrcaSecureJsonData } from '../types';
 
-interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions, MySecureJsonData> {}
+type Props = DataSourcePluginOptionsEditorProps<OrcaDataSourceOptions, OrcaSecureJsonData>;
 
-export function ConfigEditor(props: Props) {
-  const { onOptionsChange, options } = props;
-  const { jsonData, secureJsonFields, secureJsonData } = options;
+export const ConfigEditor: React.FC<Props> = ({ options, onOptionsChange }) => {
+  const secureJsonData = options.secureJsonData ?? {};
+  const secureFields = options.secureJsonFields ?? {};
 
-  const onPathChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const onApiKeyChange = (v?: string) => {
     onOptionsChange({
       ...options,
-      jsonData: {
-        ...jsonData,
-        path: event.target.value,
-      },
+      secureJsonData: { ...secureJsonData, apiKey: v },
     });
   };
 
-  // Secure field (only sent to the backend)
-  const onAPIKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const onResetApiKey = () => {
     onOptionsChange({
       ...options,
-      secureJsonData: {
-        apiKey: event.target.value,
-      },
-    });
-  };
-
-  const onResetAPIKey = () => {
-    onOptionsChange({
-      ...options,
-      secureJsonFields: {
-        ...options.secureJsonFields,
-        apiKey: false,
-      },
-      secureJsonData: {
-        ...options.secureJsonData,
-        apiKey: '',
-      },
+      secureJsonFields: { ...secureFields, apiKey: false },
+      secureJsonData: { ...secureJsonData, apiKey: '' },
     });
   };
 
   return (
-    <>
-      <InlineField label="Path" labelWidth={14} interactive tooltip={'Json field returned to frontend'}>
-        <Input
-          id="config-editor-path"
-          onChange={onPathChange}
-          value={jsonData.path}
-          placeholder="Enter the path, e.g. /api/v1"
-          width={40}
-        />
-      </InlineField>
-      <InlineField label="API Key" labelWidth={14} interactive tooltip={'Secure json field (backend only)'}>
+    <Stack direction="column" gap={2}>
+      <InlineField label="API Key" tooltip="Paste your Orca Scan API key (from Account → REST API)" labelWidth={20}>
         <SecretInput
-          required
-          id="config-editor-api-key"
-          isConfigured={secureJsonFields.apiKey}
-          value={secureJsonData?.apiKey}
-          placeholder="Enter your API key"
-          width={40}
-          onReset={onResetAPIKey}
-          onChange={onAPIKeyChange}
+          isConfigured={Boolean(secureFields?.apiKey)}
+          value={secureFields?.apiKey ? undefined : secureJsonData.apiKey ?? ''}
+          placeholder={secureFields?.apiKey ? 'Configured' : 'orca_xxxxxxxxxxxxxxxxxxxxxxxx'}
+          onReset={onResetApiKey}
+          onChange={(e) => onApiKeyChange(e.currentTarget.value)}
+          width={50}
         />
       </InlineField>
-    </>
+
+      <div>Click “Save &amp; test” to verify your connection.</div>
+    </Stack>
   );
-}
+};

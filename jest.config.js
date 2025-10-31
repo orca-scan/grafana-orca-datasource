@@ -2,7 +2,13 @@
 // generally used by snapshots, but can affect specific tests
 process.env.TZ = 'UTC';
 
+const baseConfig = require('./.config/jest.config');
+
 module.exports = {
-  // Jest configuration provided by Grafana scaffolding
-  ...require('./.config/jest.config'),
+  ...baseConfig,
+  setupFiles: [...(baseConfig.setupFiles ?? []), '<rootDir>/jest.setup.canvas.js'],
+  moduleNameMapper: {
+    ...baseConfig.moduleNameMapper,
+    '^canvas$': '<rootDir>/src/__mocks__/canvas.ts',
+  },
 };
