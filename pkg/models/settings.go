@@ -1,35 +1,36 @@
 package models
 
-import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
-)
-
-type PluginSettings struct {
-	Path    string                `json:"path"`
-	Secrets *SecretPluginSettings `json:"-"`
+type Settings struct {
+	BaseURL string `json:"baseUrl"`
+	APIKey  string `json:"apiKey"` // read from secure json data
 }
 
-type SecretPluginSettings struct {
-	ApiKey string `json:"apiKey"`
+type QueryRange struct {
+	From *string `json:"from"`
+	To   *string `json:"to"`
 }
 
-func LoadPluginSettings(source backend.DataSourceInstanceSettings) (*PluginSettings, error) {
-	settings := PluginSettings{}
-	err := json.Unmarshal(source.JSONData, &settings)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal PluginSettings json: %w", err)
-	}
-
-	settings.Secrets = loadSecretPluginSettings(source.DecryptedSecureJSONData)
-
-	return &settings, nil
+type Filter struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
-func loadSecretPluginSettings(source map[string]string) *SecretPluginSettings {
-	return &SecretPluginSettings{
-		ApiKey: source["apiKey"],
-	}
+type OrcaQuery struct {
+	RefID     string     `json:"refId"`
+	SheetID   string     `json:"sheetId"`
+	Limit     int        `json:"limit"`
+	Skip      int        `json:"skip"`
+	TimeField string     `json:"timeField"`
+	Filters   []Filter   `json:"filters"`
+	Range     QueryRange `json:"range"`
+}
+
+type Field struct {
+	Key         string `json:"key"`
+	Label       string `json:"label,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Format      string `json:"format,omitempty"`
+	GrafanaType string `json:"grafanaType"`
+	IsTime      bool   `json:"isTime,omitempty"`
+	Decimals    *int   `json:"decimals,omitempty"`
 }
