@@ -1,36 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { QueryEditorProps, SelectableValue } from '@grafana/data';
-import { Button, IconButton, InlineField, Input, Select, Stack, Text } from '@grafana/ui';
+import { Button, InlineField, Input, Select, Stack, Text, TextArea } from '@grafana/ui';
 import { DataSource } from '../datasource';
 import type { OrcaDataSourceOptions, OrcaQuery } from '../types';
 
 type Props = QueryEditorProps<DataSource, OrcaQuery, OrcaDataSourceOptions>;
 
-type FilterRow = { id: string; key: string; value: string };
-
-const createFilterRow = (): FilterRow => ({
-  id: `${Date.now()}-${Math.random()}`,
-  key: '',
-  value: '',
-});
-
-const toFilterRows = (filters?: Array<{ key: string; value: string }>): FilterRow[] => {
-  if (!filters || !filters.length) {
-    return [createFilterRow()];
-  }
-  return filters.map((f, idx) => ({
-    id: `${Date.now()}-${idx}`,
-    key: f.key,
-    value: f.value,
-  }));
-};
+const serializeFilters = (filters?: Array<{ key: string; value: string }>) =>
+  (filters ?? []).map((f) => `${f.key}=${f.value}`).join('\n');
 
 export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRunQuery }) => {
   const [sheets, setSheets] = useState<Array<{ _id: string; name: string }>>([]);
   const [timeField, setTimeField] = useState<string | undefined>(query.timeField);
   const [availableFields, setAvailableFields] = useState<Array<SelectableValue<string>>>([]);
   const [timeFieldOptions, setTimeFieldOptions] = useState<Array<SelectableValue<string>>>([]);
-  const [filterRows, setFilterRows] = useState<FilterRow[]>(() => toFilterRows(query.filters));
+  const [filterText, setFilterText] = useState(() => serializeFilters(query.filters));
   const [isLoadingFields, setIsLoadingFields] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -46,14 +30,7 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
   }, [query.timeField]);
 
   useEffect(() => {
-    const sanitized = JSON.stringify(query.filters ?? []);
-    setFilterRows((current) => {
-      const currentSerialized = JSON.stringify(current.map(({ key, value }) => ({ key, value })));
-      if (currentSerialized === sanitized) {
-        return current.length ? current : [createFilterRow()];
-      }
-      return toFilterRows(query.filters);
-    });
+    setFilterText(serializeFilters(query.filters));
   }, [query.filters]);
 
   useEffect(() => {
@@ -99,41 +76,16 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
     onRunQuery();
   };
 
-  const syncFilters = (rows: FilterRow[]) => {
-    const cleaned = rows.length ? rows : [createFilterRow()];
-    setFilterRows(cleaned);
-    const sanitized = cleaned
-      .filter((row) => row.key.trim() && row.value.trim())
-      .map((row) => ({ key: row.key.trim(), value: row.value.trim() }));
-    applyPatch({ filters: sanitized });
-  };
-
-  const handleFilterKeyChange = (id: string, value: string | null) => {
-    const nextRows = filterRows.map((row) => (row.id === id ? { ...row, key: value ?? '' } : row));
-    syncFilters(nextRows);
-    const updated = nextRows.find((row) => row.id === id);
-    if (updated && updated.key.trim() && updated.value.trim()) {
-      onRunQuery();
-    }
-  };
-
-  const handleFilterValueChange = (id: string, value: string) => {
-    const nextRows = filterRows.map((row) => (row.id === id ? { ...row, value } : row));
-    syncFilters(nextRows);
-    const updated = nextRows.find((row) => row.id === id);
-    if (updated && updated.key.trim() && updated.value.trim()) {
-      onRunQuery();
-    }
-  };
-
-  const removeFilterRow = (id: string) => {
-    const next = filterRows.filter((row) => row.id !== id);
-    syncFilters(next.length ? next : [createFilterRow()]);
-    onRunQuery();
-  };
-
-  const addFilterRow = () => {
-    syncFilters([...filterRows, createFilterRow()]);
+  const parseFilterText = (value: string): Array<{ key: string; value: string }> => {
+    return value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [k, ...rest] = line.split('=');
+        return { key: (k || '').trim(), value: rest.join('=').trim() };
+      })
+      .filter((pair) => pair.key && pair.value);
   };
 
   const positiveNumberOr = (value: string, fallback: number) => {
@@ -146,7 +98,10 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
 
   return (
     <Stack direction="column" gap={2}>
-      <InlineField label="Sheet" labelWidth={16}>
+      <Text variant="bodySmall" color="secondary">
+        Choose the Orca Scan sheet you want to visualise.
+      </Text>
+      <InlineField label="Sheet" labelWidth={14}>
         {/* Temporary use of Select until Combobox is fully supported in Grafana UI */}
         {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
         <Select
@@ -172,13 +127,14 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
         fill="text"
         onClick={() => setShowAdvanced((prev) => !prev)}
       >
-        {showAdvanced ? 'Hide advanced options' : 'Show advanced options'}
+        {showAdvanced ? 'Hide advanced options' : 'Advanced options (limit & offset)'}
       </Button>
 
       {showAdvanced && (
         <Stack direction="column" gap={1}>
           <Text variant="bodySmall" color="secondary">
-            Orca Scan returns up to 5000 rows per request. Use Skip to paginate through larger sheets.
+            Each request can fetch up to 5,000 rows. Use Skip to jump past the first N rows when working with very large
+            sheets.
           </Text>
           <Stack direction="row" gap={2}>
             <InlineField label="Limit" labelWidth={16} tooltip="Max rows per request (Orca API limit 5000)">
@@ -205,11 +161,10 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
         </Stack>
       )}
 
-      <InlineField
-        label="Time field"
-        labelWidth={16}
-        tooltip="Optional. Select a time column so Grafana can drive the dashboard time range."
-      >
+      <Text variant="bodySmall" color="secondary">
+        Optional: pick the timestamp column that should drive Grafana’s time range. Leave blank for table mode.
+      </Text>
+      <InlineField label="Time field" labelWidth={14}>
         {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
         <Select
           options={timeFieldOptions}
@@ -239,58 +194,24 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
 
       <Stack direction="column" gap={1}>
         <Text variant="bodySmall" color="secondary">
-          Filters are applied after rows are loaded. Leave fields blank to remove the filter.
+          Filters (one per line). Example: <code>status=Active</code>
         </Text>
-        {filterRows.map((row, idx) => {
-          const datalistId = `orca-filter-fields-${idx}`;
-          return (
-            <Stack direction="row" gap={1} alignItems="center" key={row.id}>
-              <Input
-                placeholder="Field"
-                value={row.key}
-                width={20}
-                list={datalistId}
-                disabled={!query.sheetId}
-                onChange={(e) => handleFilterKeyChange(row.id, e.currentTarget.value)}
-                onBlur={() => {
-                  const target = filterRows.find((r) => r.id === row.id);
-                  if (target && target.key.trim() && target.value.trim()) {
-                    onRunQuery();
-                  }
-                }}
-              />
-              <datalist id={datalistId}>
-                {availableFields.map((option) => (
-                  <option key={`${datalistId}-${option.value}`} value={option.value ?? ''}>
-                    {option.label}
-                  </option>
-                ))}
-              </datalist>
-              <Input
-                placeholder="Value"
-                value={row.value}
-                width={20}
-                onChange={(e) => handleFilterValueChange(row.id, e.currentTarget.value)}
-                onBlur={() => onRunQuery()}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    onRunQuery();
-                  }
-                }}
-              />
-              <IconButton
-                name="trash-alt"
-                variant="secondary"
-                aria-label="Remove filter"
-                disabled={filterRows.length === 1 && !row.key && !row.value}
-                onClick={() => removeFilterRow(row.id)}
-              />
-            </Stack>
-          );
-        })}
-        <Button icon="plus" variant="secondary" onClick={addFilterRow}>
-          Add filter
-        </Button>
+        <TextArea
+          value={filterText}
+          placeholder="field=value"
+          spellCheck={false}
+          onChange={(e) => setFilterText(e.currentTarget.value)}
+          onBlur={() => {
+            applyPatch({ filters: parseFilterText(filterText) });
+            onRunQuery();
+          }}
+          rows={3}
+        />
+        {availableFields.length > 0 && (
+          <Text variant="bodySmall" color="secondary">
+            Available columns: {availableFields.map((option) => option.value).filter(Boolean).join(', ')}
+          </Text>
+        )}
       </Stack>
     </Stack>
   );
