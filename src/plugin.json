@@ -12,13 +12,15 @@
   "includes": [],
 
   "info": {
-    "description": "Query Orca Scan sheets via REST API. Paste your API key, pick a sheet, build dashboards. Multiple Orca accounts supported via multiple data source instances.",
+    "description": "Bring your Orca Scan sheet data into Grafana. Authenticate with an API key, browse sheets and fields, and build dashboards with live barcode data.",
     "author": { "name": "Orca Scan", "url": "https://orcascan.com" },
-    "keywords": ["orcascan", "barcode", "sheets", "http"],
+    "keywords": ["orcascan", "barcode", "inventory", "rest api", "datasource"],
     "logos": { "small": "img/logo.svg", "large": "img/logo.svg" },
     "links": [
-      { "name": "Guide", "url": "https://orcascan.com/guides/rest-api-f09a21c3" },
-      { "name": "Support", "url": "https://orcascan.com/contact" }
+      { "name": "Documentation", "url": "https://orcascan.com/guides/rest-api-f09a21c3" },
+      { "name": "Repository", "url": "https://github.com/orca-scan/grafana-orca-datasource" },
+      { "name": "Support", "url": "https://orcascan.com/contact" },
+      { "name": "Raise issue", "url": "https://github.com/orca-scan/grafana-orca-datasource/issues" }
     ],
     "screenshots": [],
     "version": "1.0.0",
