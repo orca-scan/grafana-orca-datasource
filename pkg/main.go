@@ -250,6 +250,12 @@ func (d *orcaDatasource) handleFields(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := inst.validateAPIKey(); err != nil {
+		backend.Logger.Warn("Fields missing API key")
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	sheetID := strings.TrimSpace(r.URL.Query().Get("sheetId"))
 	if sheetID == "" {
 		writeError(w, http.StatusBadRequest, fmt.Errorf("sheetId is required"))
