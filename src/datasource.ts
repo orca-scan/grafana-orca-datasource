@@ -36,6 +36,14 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
     return Array.isArray(res?.sheets) ? res.sheets : [];
   }
 
+  async listFields(sheetId: string): Promise<OrcaFieldInfo[]> {
+    if (!sheetId) {
+      return [];
+    }
+    const res = await getBackendSrv().get(`/api/datasources/uid/${this.uid}/resources/fields`, { sheetId });
+    return Array.isArray(res?.fields) ? res.fields : [];
+  }
+
   async query(req: DataQueryRequest<OrcaQuery>): Promise<DataQueryResponse> {
     const active = req.targets.filter((t) => !t.hide);
     if (!active.length) {

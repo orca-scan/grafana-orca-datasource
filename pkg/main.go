@@ -178,6 +178,7 @@ func (d *orcaDatasource) resourcesHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", d.handlePing)
 	mux.HandleFunc("/sheets", d.handleSheets)
+	mux.HandleFunc("/fields", d.handleFields)
 	mux.HandleFunc("/query", d.handleQuery)
 	return mux
 }
@@ -238,6 +239,34 @@ func (d *orcaDatasource) handleSheets(w http.ResponseWriter, r *http.Request) {
 	backend.Logger.Info("Sheets fetched", "count", len(sheets))
 
 	writeJSON(w, http.StatusOK, apiResponse{"sheets": sheets})
+}
+
+func (d *orcaDatasource) handleFields(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	inst, err := d.instanceFromRequest(r)
+	if err != nil {
+		backend.Logger.Error("Fields failed to resolve instance", "err", err)
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	sheetID := strings.TrimSpace(r.URL.Query().Get("sheetId"))
+	if sheetID == "" {
+		writeError(w, http.StatusBadRequest, fmt.Errorf("sheetId is required"))
+		return
+	}
+
+	fieldsMeta, err := inst.getFields(ctx, sheetID)
+	if err != nil {
+		backend.Logger.Error("Fields fetch failed", "sheetId", sheetID, "err", err)
+		writeError(w, statusFromError(err), err)
+		return
+	}
+
+	descList, _ := buildFieldDescriptors(fieldsMeta, nil)
+	fieldInfos := buildFieldInfos(descList, "")
+
+	writeJSON(w, http.StatusOK, apiResponse{"fields": fieldInfos})
 }
 
 func (d *orcaDatasource) handleQuery(w http.ResponseWriter, r *http.Request) {
