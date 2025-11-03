@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import type { QueryEditorProps, SelectableValue } from '@grafana/data';
-import { InlineField, Select, Stack, Text, TextArea } from '@grafana/ui';
+import React, { useMemo, useState } from 'react';
+import type { QueryEditorProps } from '@grafana/data';
+import { InlineField, Input, Select, Stack, Text, TextArea } from '@grafana/ui';
 import { DataSource } from '../datasource';
 import type { OrcaDataSourceOptions, OrcaQuery } from '../types';
 
@@ -12,59 +12,24 @@ const serializeFilters = (filters?: Array<{ key: string; value: string }>) =>
 export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRunQuery }) => {
   const [sheets, setSheets] = useState<Array<{ _id: string; name: string }>>([]);
   const [timeField, setTimeField] = useState<string | undefined>(query.timeField);
-  const [availableFields, setAvailableFields] = useState<Array<SelectableValue<string>>>([]);
-  const [timeFieldOptions, setTimeFieldOptions] = useState<Array<SelectableValue<string>>>([]);
   const [filterText, setFilterText] = useState(() => serializeFilters(query.filters));
-  const [isLoadingFields, setIsLoadingFields] = useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     datasource
       .listSheets()
       .then(setSheets)
       .catch(() => setSheets([]));
   }, [datasource]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setTimeField(query.timeField);
   }, [query.timeField]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setFilterText(serializeFilters(query.filters));
   }, [query.filters]);
 
-  useEffect(() => {
-    if (!query.sheetId) {
-      setAvailableFields([]);
-      setTimeFieldOptions([]);
-      return;
-    }
-
-    setIsLoadingFields(true);
-    datasource
-      .listFields(query.sheetId)
-      .then((fields) => {
-        const options: Array<SelectableValue<string>> = fields.map((f) => ({
-          label: f.label ?? f.key,
-          value: f.key,
-          description: f.isTime ? 'Time field' : undefined,
-        }));
-        setAvailableFields(options);
-        const timeOptions: Array<SelectableValue<string>> = fields
-          .filter((f) => f.grafanaType === 'time')
-          .map((f) => ({
-            label: f.label ?? f.key,
-            value: f.key,
-          }));
-        setTimeFieldOptions(timeOptions);
-      })
-      .catch(() => {
-        setAvailableFields([]);
-        setTimeFieldOptions([]);
-      })
-      .finally(() => setIsLoadingFields(false));
-  }, [datasource, query.sheetId]);
-
-  const sheetOptions = useMemo<Array<SelectableValue<string>>>(() => sheets.map((s) => ({ label: s.name, value: s._id })), [sheets]);
+  const sheetOptions = useMemo(() => sheets.map((s) => ({ label: s.name, value: s._id })), [sheets]);
 
   const applyPatch = (patch: Partial<OrcaQuery>) => {
     onChange({ ...query, ...patch });
@@ -115,37 +80,28 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
       <Text variant="bodySmall" color="secondary">
         2. (Optional) Enter the timestamp column that should drive Grafana’s time range. Leave blank for table views.
       </Text>
-      <InlineField label="Time field" labelWidth={14}>
-        {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
-        <Select
-          options={timeFieldOptions}
-          value={
-            timeField
-              ? timeFieldOptions.find((option) => option.value === timeField) ?? { label: timeField, value: timeField }
-              : null
-          }
-          isClearable
-          allowCustomValue
-          placeholder={timeFieldOptions.length ? 'Select or type field name' : 'Type field name'}
+      <InlineField label="Time field" labelWidth={14} tooltip="Type the exact field name, for example Release Date.">
+        <Input
+          value={timeField ?? ''}
+          placeholder="Type field name"
           disabled={!query.sheetId}
-          isLoading={isLoadingFields && !timeFieldOptions.length}
-          onChange={(option) => {
-            const value = option?.value ?? undefined;
-            setTimeField(value);
-            applyPatchAndRun({ timeField: value });
+          onChange={(event) => {
+            setTimeField(event.currentTarget.value || undefined);
           }}
-          onCreateOption={(value) => {
-            const trimmed = value.trim();
-            setTimeField(trimmed);
-            applyPatchAndRun({ timeField: trimmed || undefined });
+          onBlur={() => {
+            const trimmed = timeField?.trim();
+            if (trimmed !== timeField) {
+              setTimeField(trimmed || undefined);
+            }
+            applyPatchAndRun({ timeField: trimmed ? trimmed : undefined });
           }}
-          width="auto"
+          width={30}
         />
       </InlineField>
 
       <Stack direction="column" gap={1}>
         <Text variant="bodySmall" color="secondary">
-          3. (Optional) Add filters — enter one <code>field=value</code> pair per line. We match rows exactly.
+          3. (Optional) Add filters — enter one <code>field=value</code> pair per line. Matching is case sensitive.
         </Text>
         <TextArea
           value={filterText}
@@ -158,11 +114,6 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
           }}
           rows={3}
         />
-        {availableFields.length > 0 && (
-          <Text variant="bodySmall" color="secondary">
-            Available columns: {availableFields.map((option) => option.value).filter(Boolean).join(', ')}
-          </Text>
-        )}
       </Stack>
     </Stack>
   );

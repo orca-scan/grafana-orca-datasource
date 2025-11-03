@@ -306,7 +306,6 @@ func (d *orcaDatasource) handleQuery(w http.ResponseWriter, r *http.Request) {
 			"sheetId":   "",
 			"fields":    []string{},
 			"timeField": query.TimeField,
-			"message":   "sheetId is required",
 		})
 		return
 	}
@@ -574,7 +573,8 @@ func filtersMatch(row map[string]any, filters []models.Filter) bool {
 		if f.Key == "" {
 			continue
 		}
-		val, ok := row[f.Key]
+		key := normalizeFieldKey(f.Key)
+		val, ok := resolveFieldKey(row, key)
 		if !ok {
 			return false
 		}
@@ -586,8 +586,27 @@ func filtersMatch(row map[string]any, filters []models.Filter) bool {
 	return true
 }
 
+func resolveFieldKey(row map[string]any, lookup string) (any, bool) {
+	if val, ok := row[lookup]; ok {
+		return val, true
+	}
+	reduced := strings.ToLower(lookup)
+	for k, v := range row {
+		if strings.ToLower(normalizeFieldKey(k)) == reduced {
+			return v, true
+		}
+	}
+	return nil, false
+}
+
+func normalizeFieldKey(key string) string {
+	key = strings.TrimSpace(key)
+	key = trimQuotes(key)
+	return key
+}
+
 func valueEquals(val any, expected string) bool {
-	expected = strings.TrimSpace(expected)
+	expected = trimQuotes(strings.TrimSpace(expected))
 	switch v := val.(type) {
 	case string:
 		return strings.EqualFold(strings.TrimSpace(v), expected)
@@ -613,6 +632,15 @@ func valueEquals(val any, expected string) bool {
 	default:
 		return fmt.Sprint(v) == expected
 	}
+}
+
+func trimQuotes(value string) string {
+	if len(value) >= 2 {
+		if (value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'') {
+			return value[1 : len(value)-1]
+		}
+	}
+	return value
 }
 
 func buildFieldDescriptors(fields []orcaField, rows []map[string]any) ([]fieldDescriptor, map[string]fieldDescriptor) {

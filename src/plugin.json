@@ -23,7 +23,7 @@
       { "name": "Raise issue", "url": "https://github.com/orca-scan/grafana-orca-datasource/issues" }
     ],
     "screenshots": [],
-    "version": "1.0.0",
+    "version": "1.0.1",
     "updated": "%TODAY%"
   },
 

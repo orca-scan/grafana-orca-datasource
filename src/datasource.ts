@@ -23,8 +23,14 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
   async testDatasource() {
     try {
       const res = await getBackendSrv().get(`/api/datasources/uid/${this.uid}/resources/ping`);
-      const message = (res && (res.message || res.status)) || 'OK';
-      return { status: 'success', message };
+      if (res?.status !== 'ok') {
+        const fallback = res?.message || res?.status || 'Connection test failed';
+        return { status: 'error', message: fallback };
+      }
+      return {
+        status: 'success',
+        message: 'Connection successful. Orca Scan data source is ready to use.',
+      };
     } catch (err: any) {
       const message = err?.data?.message || err?.statusText || err?.message || 'Error';
       return { status: 'error', message };
