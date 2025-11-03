@@ -4,8 +4,8 @@ import {
   DataQueryRequest,
   DataQueryResponse,
   DataSourceInstanceSettings,
+  Field,
   FieldType,
-  MutableDataFrame,
   dateTime,
 } from '@grafana/data';
 import { getBackendSrv } from '@grafana/runtime';
@@ -80,11 +80,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
 
     const computedDecimals = this.computeDecimalMap(rows);
 
-    const frame = new MutableDataFrame({
-      refId: query.refId,
-      name: query.sheetId ?? query.refId,
-      meta: { preferredVisualisationType: preferredVisualisation },
-      fields: fieldInfos.map((info) => {
+    const fieldPairs = fieldInfos.map((info) => {
         const config: Record<string, any> = {};
         if (info.label && info.label !== info.key) {
           config.displayName = info.label;
@@ -101,18 +97,18 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
           config.decimals = decimals;
         }
 
-        return {
+        const field: Field = {
           name: info.key,
           type: fieldType,
           config: Object.keys(config).length ? config : undefined,
+          values: [] as any[],
         };
-      }),
-    });
+
+        return { info, fieldType, field };
+      });
 
     rows.forEach((row) => {
-      const record: Record<string, any> = {};
-      for (const info of fieldInfos) {
-        const type = this.mapGrafanaType(info.grafanaType);
+      fieldPairs.forEach(({ info, fieldType, field }) => {
         let value = row[info.key];
 
         if (value === undefined && info.grafanaType === 'number') {
@@ -127,10 +123,16 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
           }
         }
 
-        record[info.key] = this.normalizeValue(value, type);
-      }
-      frame.add(record);
+        (field.values as any[]).push(this.normalizeValue(value, fieldType));
+      });
     });
+
+    const frame: DataFrame = {
+      refId: query.refId,
+      name: query.sheetId ?? query.refId,
+      meta: { preferredVisualisationType: preferredVisualisation },
+      fields: fieldPairs.map(({ field }) => field),
+    };
 
     return [frame];
   }
