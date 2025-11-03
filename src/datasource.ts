@@ -6,6 +6,7 @@ import {
   DataSourceInstanceSettings,
   Field,
   FieldType,
+  FieldConfig,
   dateTime,
 } from '@grafana/data';
 import { getBackendSrv } from '@grafana/runtime';
@@ -81,7 +82,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
     const computedDecimals = this.computeDecimalMap(rows);
 
     const fieldPairs = fieldInfos.map((info) => {
-        const config: Record<string, any> = {};
+        const config: FieldConfig = {};
         if (info.label && info.label !== info.key) {
           config.displayName = info.label;
         }
@@ -100,7 +101,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
         const field: Field = {
           name: info.key,
           type: fieldType,
-          config: Object.keys(config).length ? config : undefined,
+          config,
           values: [] as any[],
         };
 
@@ -132,6 +133,7 @@ export class DataSource extends DataSourceApi<OrcaQuery, OrcaDataSourceOptions> 
       name: query.sheetId ?? query.refId,
       meta: { preferredVisualisationType: preferredVisualisation },
       fields: fieldPairs.map(({ field }) => field),
+      length: rows.length,
     };
 
     return [frame];
