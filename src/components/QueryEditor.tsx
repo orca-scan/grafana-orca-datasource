@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { QueryEditorProps } from '@grafana/data';
-import { Button, Combobox, ComboboxOption, IconButton, InlineField, Input, Stack, Text } from '@grafana/ui';
+import type { QueryEditorProps, SelectableValue } from '@grafana/data';
+import { Button, IconButton, InlineField, Input, Select, Stack, Text } from '@grafana/ui';
 import { DataSource } from '../datasource';
 import type { OrcaDataSourceOptions, OrcaQuery } from '../types';
 
@@ -28,8 +28,8 @@ const toFilterRows = (filters?: Array<{ key: string; value: string }>): FilterRo
 export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRunQuery }) => {
   const [sheets, setSheets] = useState<Array<{ _id: string; name: string }>>([]);
   const [timeField, setTimeField] = useState<string | undefined>(query.timeField);
-  const [availableFields, setAvailableFields] = useState<Array<ComboboxOption<string>>>([]);
-  const [timeFieldOptions, setTimeFieldOptions] = useState<Array<ComboboxOption<string>>>([]);
+  const [availableFields, setAvailableFields] = useState<Array<SelectableValue<string>>>([]);
+  const [timeFieldOptions, setTimeFieldOptions] = useState<Array<SelectableValue<string>>>([]);
   const [filterRows, setFilterRows] = useState<FilterRow[]>(() => toFilterRows(query.filters));
   const [isLoadingFields, setIsLoadingFields] = useState(false);
 
@@ -66,20 +66,19 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
     datasource
       .listFields(query.sheetId)
       .then((fields) => {
-        const options = fields.map((f) => ({
+        const options: Array<SelectableValue<string>> = fields.map((f) => ({
           label: f.label ?? f.key,
           value: f.key,
           description: f.isTime ? 'Time field' : undefined,
         }));
         setAvailableFields(options);
-        setTimeFieldOptions(
-          fields
-            .filter((f) => f.grafanaType === 'time')
-            .map((f) => ({
-              label: f.label ?? f.key,
-              value: f.key,
-            }))
-        );
+        const timeOptions: Array<SelectableValue<string>> = fields
+          .filter((f) => f.grafanaType === 'time')
+          .map((f) => ({
+            label: f.label ?? f.key,
+            value: f.key,
+          }));
+        setTimeFieldOptions(timeOptions);
       })
       .catch(() => {
         setAvailableFields([]);
@@ -88,7 +87,7 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
       .finally(() => setIsLoadingFields(false));
   }, [datasource, query.sheetId]);
 
-  const sheetOptions = useMemo<Array<ComboboxOption<string>>>(() => sheets.map((s) => ({ label: s.name, value: s._id })), [sheets]);
+  const sheetOptions = useMemo<Array<SelectableValue<string>>>(() => sheets.map((s) => ({ label: s.name, value: s._id })), [sheets]);
 
   const applyPatch = (patch: Partial<OrcaQuery>) => {
     onChange({ ...query, ...patch });
@@ -109,7 +108,12 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
   };
 
   const handleFilterKeyChange = (id: string, value: string | null) => {
-    syncFilters(filterRows.map((row) => (row.id === id ? { ...row, key: value ?? '' } : row)));
+    const nextRows = filterRows.map((row) => (row.id === id ? { ...row, key: value ?? '' } : row));
+    syncFilters(nextRows);
+    const updated = nextRows.find((row) => row.id === id);
+    if (updated && updated.key.trim() && updated.value.trim()) {
+      onRunQuery();
+    }
   };
 
   const handleFilterValueChange = (id: string, value: string) => {
@@ -137,21 +141,22 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
   return (
     <Stack direction="column" gap={2}>
       <InlineField label="Sheet" labelWidth={16}>
-        <Combobox
+        {/* Temporary use of Select until Combobox is fully supported in Grafana UI */}
+        {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
+        <Select
           options={sheetOptions}
-          value={query.sheetId ?? null}
+          value={sheetOptions.find((option) => option.value === query.sheetId) ?? null}
           isClearable
           placeholder="Select a sheet"
           onChange={(option) => {
-            const value = option?.value ?? '';
+            const value = option?.value ?? undefined;
             applyPatchAndRun({
-              sheetId: value || undefined,
+              sheetId: value,
               skip: query.skip ?? 0,
             });
           }}
-          loading={!sheets.length}
+          isLoading={!sheets.length}
           width="auto"
-          minWidth={22}
         />
       </InlineField>
 
@@ -187,25 +192,30 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
         labelWidth={16}
         tooltip="Optional. Select a time column so Grafana can drive the dashboard time range."
       >
-        <Combobox
+        {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
+        <Select
           options={timeFieldOptions}
-          value={timeField ?? null}
+          value={
+            timeField
+              ? timeFieldOptions.find((option) => option.value === timeField) ?? { label: timeField, value: timeField }
+              : null
+          }
           isClearable
-          createCustomValue
+          allowCustomValue
           placeholder={timeFieldOptions.length ? 'Select or type field name' : 'Type field name'}
           disabled={!query.sheetId}
-          loading={isLoadingFields && !timeFieldOptions.length}
+          isLoading={isLoadingFields && !timeFieldOptions.length}
           onChange={(option) => {
-            const value = option?.value ?? '';
-            setTimeField(value || undefined);
-            applyPatchAndRun({ timeField: value ? value : undefined });
+            const value = option?.value ?? undefined;
+            setTimeField(value);
+            applyPatchAndRun({ timeField: value });
           }}
-          onBlur={() => {
-            const trimmed = timeField?.trim();
-            applyPatch({ timeField: trimmed ? trimmed : undefined });
+          onCreateOption={(value) => {
+            const trimmed = value.trim();
+            setTimeField(trimmed);
+            applyPatchAndRun({ timeField: trimmed || undefined });
           }}
           width="auto"
-          minWidth={22}
         />
       </InlineField>
 
@@ -215,16 +225,21 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
         </Text>
         {filterRows.map((row, idx) => (
           <Stack direction="row" gap={1} alignItems="center" key={row.id}>
-            <Combobox
+            {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
+            <Select
               options={availableFields}
-              value={row.key || null}
+              value={
+                row.key
+                  ? availableFields.find((option) => option.value === row.key) ?? { label: row.key, value: row.key }
+                  : null
+              }
               isClearable
-              createCustomValue
+              allowCustomValue
               placeholder="Field"
               disabled={!query.sheetId}
               width="auto"
-              minWidth={16}
               onChange={(option) => handleFilterKeyChange(row.id, option?.value ?? null)}
+              onCreateOption={(value) => handleFilterKeyChange(row.id, value || null)}
             />
             <Input
               placeholder="Value"
