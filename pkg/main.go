@@ -209,7 +209,7 @@ func (d *orcaDatasource) handlePing(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, apiResponse{
 		"status":     "ok",
-		"message":    "pong",
+		"message":    "Connection successful. Orca Scan data source is ready to use.",
 		"sheetCount": len(sheets),
 	})
 }

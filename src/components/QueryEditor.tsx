@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { QueryEditorProps, SelectableValue } from '@grafana/data';
-import { Button, InlineField, Input, Select, Stack, Text, TextArea } from '@grafana/ui';
+import { InlineField, Select, Stack, Text, TextArea } from '@grafana/ui';
 import { DataSource } from '../datasource';
 import type { OrcaDataSourceOptions, OrcaQuery } from '../types';
 
@@ -16,7 +16,6 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
   const [timeFieldOptions, setTimeFieldOptions] = useState<Array<SelectableValue<string>>>([]);
   const [filterText, setFilterText] = useState(() => serializeFilters(query.filters));
   const [isLoadingFields, setIsLoadingFields] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     datasource
@@ -88,18 +87,10 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
       .filter((pair) => pair.key && pair.value);
   };
 
-  const positiveNumberOr = (value: string, fallback: number) => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      return fallback;
-    }
-    return Math.floor(parsed);
-  };
-
   return (
     <Stack direction="column" gap={2}>
       <Text variant="bodySmall" color="secondary">
-        Choose the Orca Scan sheet you want to visualise.
+        1. Pick the Orca Scan sheet you want to use.
       </Text>
       <InlineField label="Sheet" labelWidth={14}>
         {/* Temporary use of Select until Combobox is fully supported in Grafana UI */}
@@ -121,48 +112,8 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
         />
       </InlineField>
 
-      <Button
-        icon={showAdvanced ? 'angle-down' : 'angle-right'}
-        variant="secondary"
-        fill="text"
-        onClick={() => setShowAdvanced((prev) => !prev)}
-      >
-        {showAdvanced ? 'Hide advanced options' : 'Advanced options (limit & offset)'}
-      </Button>
-
-      {showAdvanced && (
-        <Stack direction="column" gap={1}>
-          <Text variant="bodySmall" color="secondary">
-            Each request can fetch up to 5,000 rows. Use Skip to jump past the first N rows when working with very large
-            sheets.
-          </Text>
-          <Stack direction="row" gap={2}>
-            <InlineField label="Limit" labelWidth={16} tooltip="Max rows per request (Orca API limit 5000)">
-              <Input
-                type="number"
-                value={String(query.limit ?? 5000)}
-                width={20}
-                min={0}
-                onChange={(e) => applyPatch({ limit: positiveNumberOr(e.currentTarget.value, query.limit ?? 5000) })}
-                onBlur={() => onRunQuery()}
-              />
-            </InlineField>
-            <InlineField label="Skip" labelWidth={16} tooltip="Offset rows (default 0)">
-              <Input
-                type="number"
-                value={String(query.skip ?? 0)}
-                width={20}
-                min={0}
-                onChange={(e) => applyPatch({ skip: positiveNumberOr(e.currentTarget.value, query.skip ?? 0) })}
-                onBlur={() => onRunQuery()}
-              />
-            </InlineField>
-          </Stack>
-        </Stack>
-      )}
-
       <Text variant="bodySmall" color="secondary">
-        Optional: pick the timestamp column that should drive Grafana’s time range. Leave blank for table mode.
+        2. (Optional) Enter the timestamp column that should drive Grafana’s time range. Leave blank for table views.
       </Text>
       <InlineField label="Time field" labelWidth={14}>
         {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
@@ -194,7 +145,7 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
 
       <Stack direction="column" gap={1}>
         <Text variant="bodySmall" color="secondary">
-          Filters (one per line). Example: <code>status=Active</code>
+          3. (Optional) Add filters — enter one <code>field=value</code> pair per line. We match rows exactly.
         </Text>
         <TextArea
           value={filterText}
