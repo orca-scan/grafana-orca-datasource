@@ -8,8 +8,6 @@ Plugin ID: `orcascan-orcascan-datasource`
 
 The Orca Scan data source lets Grafana users visualise live barcode capture data without leaving the Orca ecosystem. Authenticate with your Orca API key, pick a sheet, select the time field you care about, and you are ready to build dashboards.
 
-<img src="/public/plugins/orcascan-orcascan-datasource/img/sheet-dashboard.png" alt="Inventory overview" width="100%" />
-
 ---
 
 ## Features
