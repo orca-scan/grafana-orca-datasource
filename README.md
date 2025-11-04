@@ -116,12 +116,12 @@ Upload the ZIP to GitHub Releases and paste both the download URL and SHA1 into 
 
 ## How it works (end-to-end)
 
-1. **Plugin load** – Grafana watches the `dist/` directory. When it sees `plugin.json` with `backend: true`, it boots the frontend bundle and launches the `gpx_orca_scan` binary.
-2. **Frontend requests** – The React datasource (`src/datasource.ts`) uses `getBackendSrv()` to call paths such as `/api/datasources/uid/${this.uid}/resources/ping|sheets|fields|query`. That `/resources/*` prefix is Grafana’s built‑in reverse proxy to the plugin backend process.
-3. **Backend routing** – `pkg/main.go` registers handlers for `/ping`, `/sheets`, `/fields`, and `/query`. Each handler fetches the decrypted API key from Grafana, validates it, and invokes the corresponding Orca Scan REST endpoint (`GET /v1/sheets`, `GET /v1/sheets/{id}/fields`, `GET /v1/sheets/{id}/rows`).
-4. **Data shaping** – The backend normalises Orca’s JSON: strings containing numbers are converted to numeric types, timestamps are parsed into Grafana time fields, GPS columns are split into `<field>_lat`/`<field>_lon`, and the detected decimals are recorded so Grafana displays sensible precision.
-5. **Frames to UI** – The frontend turns the shaped payload into Grafana data frames. Configured sheets become table or time‑series visualisations, filters from the query editor translate to client-side equality matching, and the selected time field drives Grafana’s time picker.
-6. **Dashboard render** – Grafana caches metadata (sheet list, field definitions) and renders panels. Subsequent interactions reuse cached results until the TTL expires or the user refreshes.
+1. **Plugin load** – Grafana reads `dist/plugin.json` and spins up the React bundle plus the `dist/gpx_orca_scan` Go backend.
+2. **Frontend requests** – `src/datasource.ts` calls Grafana’s proxy endpoints (e.g. `/api/datasources/uid/<uid>/resources/ping`, `/resources/sheets`, `/resources/fields`, `/resources/query`). Grafana forwards those calls to the backend binary.
+3. **Backend routing** – `pkg/main.go` handles the `/ping`, `/sheets`, `/fields`, and `/query` routes. It pulls the decrypted API key from Grafana, then talks to the Orca Scan REST API (`GET /v1/sheets`, `/v1/sheets/{id}/fields`, `/v1/sheets/{id}/rows`).
+4. **Data shaping** – Orca's field metadata is respected: numeric/date/boolean/gps types stay as declared. Only string fields are re-checked against row samples; if every value parses cleanly as number/boolean/time/GPS we promote that type so Grafana can chart it. GPS values keep their original string and gain `<field>_lat`/`<field>_lon` helper columns, and we record decimal precision for sensible formatting.
+5. **Frames to UI** – The backend returns rows plus descriptors; the frontend converts them into Grafana data frames, applies client-side equality filters from `QueryEditor`, and honours the chosen time field.
+6. **Dashboard render** – Grafana caches sheet/field metadata and renders panels. Re-queries reuse cache until TTL expiry or manual refresh.
 
 Conceptual diagram:
 
@@ -151,24 +151,24 @@ Grafana UI (React) ─┬─┬─> /resources/ping  → Go backend → Orca Sca
 
 ### Backend (`pkg/`)
 
-- **Entry point** – `main.go` calls `datasource.Serve`, wiring the resource mux (`resourcesHandler`), query handler (`orcaDatasource.QueryData`), and health checks.
-- **Resource handlers** – `handlePing`, `handleSheets`, `handleFields`, and `handleQuery` all retrieve the decrypted API key from Grafana, validate it, and then call the respective Orca REST endpoints via `doRequest`.
-- **Field discovery & caching** – `fetchFields` stores sheet field metadata in an in-memory cache (`fieldCache`) so repeated UI calls avoid hitting the Orca API unnecessarily.
-- **Row processing** – `handleQuery` orchestrates `expandGeoColumns` (splits GPS fields into lat/lon), `normalizeRows` (coerces numbers/booleans, trims strings), `applyClientFilters` (implements the frontend’s equality filters), and returns rows plus field descriptors to the frontend.
-- **Testing** – Run `go test ./pkg/...` or `go run github.com/magefile/mage@v1.15.0 coverage` to execute backend tests from CI or locally.
+- **Plugin bootstrap** (`pkg/main.go`) – starts the datasource service, sets up resource routes, and provides `QueryData`/`CheckHealth` handlers via the Grafana Plugin SDK.
+- **Resource handlers** – `/ping`, `/sheets`, `/fields`, `/query` live in `pkg/main.go`. Each pulls the secure API key from `backend.PluginContext`, calls Orca, and marshals the response back to Grafana.
+- **Field typing & caching** – `fetchFields` caches Orca field definitions per sheet. Initial types come from Orca metadata; `detectKindFromRows` only promotes plain text fields when sample rows consistently parse as number/boolean/time/GPS.
+- **Row pipeline** – `handleQuery` uses `expandGeoColumns`, `normalizeRows`, and `applyClientFilters` to add helper columns, coerce values, and apply equality filters before returning rows + descriptors to the frontend.
+- **Tests** – execute with `go test ./pkg/...` or `go run github.com/magefile/mage@v1.15.0 coverage`.
 
 ### Frontend (`src/`)
 
-- **Datasource** – `datasource.ts` implements Grafana’s `DataSourceApi`. Methods like `testDatasource`, `listSheets`, `listFields`, and `query` hit the `/resources/*` endpoints exposed by the backend.
-- **Frame conversion** – `toDataFrames` maps backend responses into Grafana data frames: it honours backend-provided field metadata, computes decimal precision, expands GPS helper columns, and uses `normalizeValue`/`computeDecimalMap` to keep values typed.
-- **UI components** – `components/ConfigEditor.tsx` manages API key storage, sheet selection, and time-field choice; `components/QueryEditor.tsx` lets users define filters and pagination; both rely on the datasource methods above.
-- **Shared types** – `types.ts` mirrors the Go structs (`OrcaQuery`, `OrcaQueryResponse`, `OrcaFieldInfo`) so TypeScript and Go stay in sync.
+- **Datasource class** (`src/datasource.ts`) – implements Grafana’s `DataSourceApi`; all resource calls flow through `getBackendSrv()` to `/resources/*` endpoints exposed by the backend.
+- **Frame construction** – `toDataFrames` consumes the backend payload, respects provided metadata, keeps detected decimals, and expands GPS helper fields alongside the original values.
+- **UI** – `components/ConfigEditor.tsx` handles API key/time-field selection; `components/QueryEditor.tsx` manages filters and pagination and triggers `query()`; both consume the datasource class.
+- **Shared contracts** – `src/types.ts` mirrors Go structs so both sides agree on payload shapes.
 
 ### Why open source?
 
-- **Transparency:** reviewers can audit how credentials are handled, how requests are proxied, and how data is transformed before reaching dashboards.
-- **Maintainability:** the build, test, and packaging steps are reproducible, making upgrades and bug fixes straightforward.
-- **Extensibility:** adding new Orca endpoints or transformations is as simple as updating the Go handlers and the TypeScript datasource—no closed binaries involved.
+- **Transparency:** the complete API flow—from Grafana proxy to Orca REST—lives in this repo.
+- **Maintainability:** documented build, test, and packaging steps keep upgrades predictable.
+- **Extensibility:** add routes or data transformations by editing `pkg/main.go` and `src/datasource.ts`—no need for proprietary binaries.
 
 ## Common tasks
 
