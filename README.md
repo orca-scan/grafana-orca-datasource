@@ -123,13 +123,38 @@ Upload the ZIP to GitHub Releases and paste both the download URL and SHA1 into 
 5. **Frames to UI** – The backend returns rows plus descriptors; the frontend converts them into Grafana data frames, applies client-side equality filters from `QueryEditor`, and honours the chosen time field.
 6. **Dashboard render** – Grafana caches sheet/field metadata and renders panels. Re-queries reuse cache until TTL expiry or manual refresh.
 
-Conceptual diagram:
+Conceptual flow:
 
 ```
-Grafana UI (React) ─┬─┬─> /resources/ping  → Go backend → Orca Scan API
-                    │ │
-                    │ └─> /resources/sheets → list sheets & fields
-                    └───> /resources/query  → rows → Grafana data frames
+Grafana connector catalog
+        │
+        ▼
+User selects “Orca Scan” datasource
+        │  (frontend bundled in dist/module.js)
+        ▼
+Config editor saves API key → Grafana stores it securely
+        │
+        ▼
+Frontend (src/datasource.ts) calls
+  /api/datasources/uid/<uid>/resources/ping
+  /resources/sheets
+  /resources/fields
+  /resources/query
+        │   (Grafana proxy hands these to the plugin backend)
+        ▼
+Go backend (pkg/main.go)
+  ↳ validates API key
+  ↳ requests Orca REST API
+      • GET /v1/sheets
+      • GET /v1/sheets/{id}/fields
+      • GET /v1/sheets/{id}/rows
+  ↳ normalises rows (types, decimals, GPS helpers)
+        │
+        ▼
+Frontend builds data frames (tables/time series)
+        │
+        ▼
+Grafana panels render & cache results
 ```
 
 ## Repository layout
@@ -163,12 +188,6 @@ Grafana UI (React) ─┬─┬─> /resources/ping  → Go backend → Orca Sca
 - **Frame construction** – `toDataFrames` consumes the backend payload, respects provided metadata, keeps detected decimals, and expands GPS helper fields alongside the original values.
 - **UI** – `components/ConfigEditor.tsx` handles API key/time-field selection; `components/QueryEditor.tsx` manages filters and pagination and triggers `query()`; both consume the datasource class.
 - **Shared contracts** – `src/types.ts` mirrors Go structs so both sides agree on payload shapes.
-
-### Why open source?
-
-- **Transparency:** the complete API flow—from Grafana proxy to Orca REST—lives in this repo.
-- **Maintainability:** documented build, test, and packaging steps keep upgrades predictable.
-- **Extensibility:** add routes or data transformations by editing `pkg/main.go` and `src/datasource.ts`—no need for proprietary binaries.
 
 ## Common tasks
 
