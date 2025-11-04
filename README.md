@@ -8,15 +8,7 @@
 
 `orcascan-orcascan-datasource` is the officially supported, open-source Grafana data source for [Orca Scan](https://orcascan.com). It lets any Grafana instance query Orca Scan sheets over secure API calls so barcode activity, inventory, and field updates can be analysed alongside the rest of your observability stack.
 
-Goals in one sentence:
-- **For Grafana admins:** install the plugin, paste an Orca API key, pick a sheet, build dashboards.
-- **For maintainers:** keep a transparent, reproducible codebase that speaks directly to the Orca Scan REST API using the Grafana Plugin SDK.
-
-The code is MIT licensed and structured so any developer can clone the repo, bootstrap the toolchain, and run the full stack locally without surprises.
-
-## Local setup (zero-to-hero)
-
-This checklist is what we hand to every new teammate. Follow it in order and you will be querying Orca Scan data from a local Grafana instance in minutes.
+## Local setup
 
 ### 1. Prerequisites
 
@@ -28,7 +20,24 @@ This checklist is what we hand to every new teammate. Follow it in order and you
 | Docker & Docker Compose | Latest | Runs Grafana locally identical to production. |
 | Orca Scan API key | Business plan or higher | Grants access to real sheets during testing. |
 
-Install tooling the standard way (`nvm install 22`, `brew install go@1.24`, `brew install --cask docker`, etc.). Confirm versions:
+Suggested install commands (macOS example using Homebrew and nvm):
+
+```bash
+# Node & npm
+brew install nvm
+nvm install 22
+nvm use 22
+
+# Go
+brew install go@1.24
+echo 'export PATH="/opt/homebrew/opt/go@1.24/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+
+# Docker Desktop
+brew install --cask docker
+open -a Docker
+```
+
+Verify tool versions before continuing:
 
 ```bash
 node -v      # v22.x
