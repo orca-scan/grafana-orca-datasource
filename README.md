@@ -123,45 +123,6 @@ Upload the ZIP to GitHub Releases and paste both the download URL and SHA1 into 
 5. **Frames to UI** – The backend returns rows plus descriptors; the frontend converts them into Grafana data frames, applies client-side equality filters from `QueryEditor`, and honours the chosen time field.
 6. **Dashboard render** – Grafana caches sheet/field metadata and renders panels. Re-queries reuse cache until TTL expiry or manual refresh.
 
-Conceptual flow (files noted at each step):
-
-```
-Grafana connector catalog (Grafana UI)
-        │
-        ▼
-User clicks “Orca Scan” datasource card
-        │  (React bundle in dist/module.js registered from src/module.ts)
-        ▼
-Config screen (src/components/ConfigEditor.tsx)
-  → calls src/datasource.ts.saveJsonData & saveSecureJsonData
-  → Grafana persists jsonData / secureJsonData in its database
-        │
-        ▼
-Frontend datasource (src/datasource.ts)
-  → testDatasource() → GET /api/datasources/uid/<uid>/resources/ping
-  → listSheets()      → GET /resources/sheets
-  → listFields()      → GET /resources/fields
-  → query()           → POST /resources/query
-        │  (Grafana proxy forwards /resources/* to the backend executable)
-        ▼
-Go backend (pkg/main.go)
-  → handlePing / handleSheets / handleFields / handleQuery
-  → uses decrypt secure JSON data from backend.PluginContext
-  → calls Orca REST API:
-        • GET https://api.orcascan.com/v1/sheets
-        • GET https://api.orcascan.com/v1/sheets/{id}/fields
-        • GET https://api.orcascan.com/v1/sheets/{id}/rows
-  → classify fields (classifyField + detectKindFromRows)
-  → expandGeoColumns / normalizeRows / applyClientFilters
-        │
-        ▼
-Response to frontend (src/datasource.ts)
-  → toDataFrames() builds Grafana data frames (tables/time series)
-        │
-        ▼
-Grafana panels display results; metadata (sheet list, fields) cached until refresh
-```
-
 ## Repository layout
 
 | Path | Purpose |
