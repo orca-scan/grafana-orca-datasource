@@ -1,8 +1,14 @@
 # Orca Scan Grafana Data Source
 
+![Version](https://img.shields.io/badge/version-1.0.7-blue?style=flat-square)
+![Grafana](https://img.shields.io/badge/Grafana-%3E%3D10.4.0-orange?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+
 Plugin ID: `orcascan-orcascan-datasource`
 
 The Orca Scan data source lets Grafana users visualise live barcode capture data without leaving the Orca ecosystem. Authenticate with your Orca API key, pick a sheet, select the time field you care about, and you are ready to build dashboards.
+
+<img src="/public/plugins/orcascan-orcascan-datasource/img/sheet-dashboard.png" alt="Inventory overview" width="100%" />
 
 ---
 
@@ -12,6 +18,13 @@ The Orca Scan data source lets Grafana users visualise live barcode capture data
 - **Time-series ready** – timestamps are normalised so Grafana’s time range picker works out of the box.
 - **Smart numbers** – text fields that contain numbers are coerced to numeric types so you can calculate totals and averages.
 - **Geo support** – GPS columns are expanded into latitude and longitude fields for Geomap visualisations.
+
+---
+
+## Try it
+
+- Import `provisioning/dashboards/orca-scan-sample.json` into Grafana once your Orca Scan data source is configured. Replace the placeholder sheet ID and time field in the sample query with values from your workspace.
+- Want it to appear automatically? Map `./provisioning` to `/etc/grafana/provisioning` in your Grafana container so the sample dashboard ships pre-loaded.
 
 ---
 
@@ -25,11 +38,26 @@ The Orca Scan data source lets Grafana users visualise live barcode capture data
 
 3. **Add the data source in Grafana**
    - Navigate to *Connections → Data sources → Add data source → Orca Scan*.
-   - Paste your API key and click **Save & test** – you should see a “pong” response.
+   - Paste your API key and click **Save & test** – you should see “Connection successful. Orca Scan data source is ready to use.”
 
 4. **Build dashboards**
-   - Select the sheet you want to query, choose an optional time field, and add filters or limits as needed.
-   - Use table, time series, geomap, or any other Grafana visualisation to explore your barcode data.
+   - Select the sheet you want to query, choose an optional time field, and apply any transformations you need inside Grafana.
+   - Optional: import the sample dashboard from `provisioning/dashboards/orca-scan-sample.json` (or mount `./provisioning` for auto-provisioning) to get a ready-made table panel you can tweak.
+
+---
+
+## Overview
+
+The Orca Scan data source plugin connects your Orca Scan sheets to Grafana so you can visualise barcode activity, inventory levels, and field updates alongside the rest of your monitoring stack. Authenticate with an API key, pick a sheet, and start exploring your data within minutes.
+
+## Project status
+
+This plugin is under active development. We are prioritising the most common Orca Scan workflows first (sheet browsing, time-series dashboards, inventory tables). If you encounter issues or have feature requests, please reach out through the support channels listed below. Feedback helps us plan the next iteration.
+
+## See also
+
+- [Technical documentation](https://orcascan.com/guides/rest-api-f09a21c3)
+- [License](./LICENSE)
 
 ---
 
@@ -50,6 +78,13 @@ docker compose up -d       # spins up Grafana with the plugin mounted
 
   ```bash
   docker compose restart grafana
+  ```
+
+- To auto-provision the sample dashboard during local development, add this volume to `docker-compose.yaml`:
+
+  ```yaml
+  volumes:
+    - ./provisioning:/etc/grafana/provisioning
   ```
 
 - Quick sanity check inside the container:

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
@@ -536,10 +537,6 @@ func applyClientFilters(rows []map[string]any, query models.OrcaQuery, timeField
 	matches := make([]map[string]any, 0, len(rows))
 
 	for _, row := range rows {
-		if !filtersMatch(row, query.Filters) {
-			continue
-		}
-
 		keep := true
 
 		if timeField != "" && (fromTime != nil || toTime != nil) {
@@ -562,85 +559,6 @@ func applyClientFilters(rows []map[string]any, query models.OrcaQuery, timeField
 	}
 
 	return matches
-}
-
-func filtersMatch(row map[string]any, filters []models.Filter) bool {
-	if len(filters) == 0 {
-		return true
-	}
-
-	for _, f := range filters {
-		if f.Key == "" {
-			continue
-		}
-		key := normalizeFieldKey(f.Key)
-		val, ok := resolveFieldKey(row, key)
-		if !ok {
-			return false
-		}
-		if !valueEquals(val, f.Value) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func resolveFieldKey(row map[string]any, lookup string) (any, bool) {
-	if val, ok := row[lookup]; ok {
-		return val, true
-	}
-	reduced := strings.ToLower(lookup)
-	for k, v := range row {
-		if strings.ToLower(normalizeFieldKey(k)) == reduced {
-			return v, true
-		}
-	}
-	return nil, false
-}
-
-func normalizeFieldKey(key string) string {
-	key = strings.TrimSpace(key)
-	key = trimQuotes(key)
-	return key
-}
-
-func valueEquals(val any, expected string) bool {
-	expected = trimQuotes(strings.TrimSpace(expected))
-	switch v := val.(type) {
-	case string:
-		return strings.EqualFold(strings.TrimSpace(v), expected)
-	case bool:
-		switch strings.ToLower(expected) {
-		case "true", "1", "yes":
-			return v
-		case "false", "0", "no":
-			return !v
-		default:
-			return fmt.Sprint(v) == expected
-		}
-	case float64:
-		if parsed, err := strconv.ParseFloat(expected, 64); err == nil {
-			return v == parsed
-		}
-		return fmt.Sprint(v) == expected
-	case time.Time:
-		if parsed, err := parseOrcaTimeString(expected); err == nil {
-			return v.Equal(parsed)
-		}
-		return strings.EqualFold(v.Format(time.RFC3339), expected)
-	default:
-		return fmt.Sprint(v) == expected
-	}
-}
-
-func trimQuotes(value string) string {
-	if len(value) >= 2 {
-		if (value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'') {
-			return value[1 : len(value)-1]
-		}
-	}
-	return value
 }
 
 func buildFieldDescriptors(fields []orcaField, rows []map[string]any) ([]fieldDescriptor, map[string]fieldDescriptor) {
@@ -1350,6 +1268,60 @@ func labelOrKey(f orcaField) string {
 		return f.Label
 	}
 	return f.Key
+}
+
+func normalizeFieldKey(key string) string {
+	key = strings.TrimSpace(key)
+	key = trimQuotes(key)
+	return key
+}
+
+func canonicalizeFieldKey(key string) string {
+	key = normalizeFieldKey(key)
+	if key == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	b.Grow(len(key))
+
+	for _, r := range key {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(unicode.ToLower(r))
+		}
+	}
+
+	return b.String()
+}
+
+func trimQuotes(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return value
+	}
+
+	runes := []rune(value)
+	if len(runes) < 2 {
+		return value
+	}
+
+	quotePairs := map[rune]rune{
+		'"':  '"',
+		'\'': '\'',
+		'“':  '”',
+		'”':  '“',
+		'‘':  '’',
+		'’':  '‘',
+	}
+
+	first := runes[0]
+	last := runes[len(runes)-1]
+
+	if match, ok := quotePairs[first]; ok && match == last {
+		return strings.TrimSpace(string(runes[1 : len(runes)-1]))
+	}
+
+	return value
 }
 
 func resolveTimeField(input string, descriptors []fieldDescriptor, rows []map[string]any) (string, bool) {

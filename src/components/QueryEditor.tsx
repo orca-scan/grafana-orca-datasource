@@ -1,18 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import type { QueryEditorProps } from '@grafana/data';
-import { InlineField, Input, Select, Stack, Text, TextArea } from '@grafana/ui';
+import { InlineField, Input, Select, Stack, Text } from '@grafana/ui';
 import { DataSource } from '../datasource';
 import type { OrcaDataSourceOptions, OrcaQuery } from '../types';
 
 type Props = QueryEditorProps<DataSource, OrcaQuery, OrcaDataSourceOptions>;
 
-const serializeFilters = (filters?: Array<{ key: string; value: string }>) =>
-  (filters ?? []).map((f) => `${f.key}=${f.value}`).join('\n');
-
 export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRunQuery }) => {
   const [sheets, setSheets] = useState<Array<{ _id: string; name: string }>>([]);
   const [timeField, setTimeField] = useState<string | undefined>(query.timeField);
-  const [filterText, setFilterText] = useState(() => serializeFilters(query.filters));
 
   React.useEffect(() => {
     datasource
@@ -25,31 +21,11 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
     setTimeField(query.timeField);
   }, [query.timeField]);
 
-  React.useEffect(() => {
-    setFilterText(serializeFilters(query.filters));
-  }, [query.filters]);
-
   const sheetOptions = useMemo(() => sheets.map((s) => ({ label: s.name, value: s._id })), [sheets]);
-
-  const applyPatch = (patch: Partial<OrcaQuery>) => {
-    onChange({ ...query, ...patch });
-  };
 
   const applyPatchAndRun = (patch: Partial<OrcaQuery>) => {
     onChange({ ...query, ...patch });
     onRunQuery();
-  };
-
-  const parseFilterText = (value: string): Array<{ key: string; value: string }> => {
-    return value
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [k, ...rest] = line.split('=');
-        return { key: (k || '').trim(), value: rest.join('=').trim() };
-      })
-      .filter((pair) => pair.key && pair.value);
   };
 
   return (
@@ -98,23 +74,6 @@ export const QueryEditor: React.FC<Props> = ({ datasource, query, onChange, onRu
           width={30}
         />
       </InlineField>
-
-      <Stack direction="column" gap={1}>
-        <Text variant="bodySmall" color="secondary">
-          3. (Optional) Add filters — enter one <code>field=value</code> pair per line. Matching is case sensitive.
-        </Text>
-        <TextArea
-          value={filterText}
-          placeholder="field=value"
-          spellCheck={false}
-          onChange={(e) => setFilterText(e.currentTarget.value)}
-          onBlur={() => {
-            applyPatch({ filters: parseFilterText(filterText) });
-            onRunQuery();
-          }}
-          rows={3}
-        />
-      </Stack>
     </Stack>
   );
 };

@@ -1,8 +1,6 @@
 package main
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestComputeFieldDecimals(t *testing.T) {
 	rows := []map[string]any{
@@ -72,6 +70,60 @@ func TestDecimalsFromValue(t *testing.T) {
 		}
 		if got != tc.expected {
 			t.Fatalf("input %v: expected %d decimals, got %d", tc.input, tc.expected, got)
+		}
+	}
+}
+
+func TestResolveTimeFieldCanonicalization(t *testing.T) {
+	descriptors := []fieldDescriptor{
+		{meta: orcaField{Key: "ReleaseDate", Label: "Release Date"}, kind: fieldKindTime},
+		{meta: orcaField{Key: "Created_At", Label: "Created At"}, kind: fieldKindTime},
+	}
+
+	rows := []map[string]any{
+		{"release_date": "2025-09-01T10:00:00Z"},
+	}
+
+	tests := []struct {
+		input  string
+		want   string
+		wantOK bool
+	}{
+		{"ReleaseDate", "ReleaseDate", true},
+		{"Release Date", "ReleaseDate", true},
+		{"release date", "ReleaseDate", true},
+		{"Created At", "Created_At", true},
+		{"created_at", "Created_At", true},
+		{"release_date", "release_date", true},
+	}
+
+	for _, tc := range tests {
+		got, ok := resolveTimeField(tc.input, descriptors, rows)
+		if ok != tc.wantOK {
+			t.Fatalf("input %q: expected ok=%v got %v", tc.input, tc.wantOK, ok)
+		}
+		if ok && got != tc.want {
+			t.Fatalf("input %q: expected %q got %q", tc.input, tc.want, got)
+		}
+	}
+}
+
+func TestTrimQuotes(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{`"Status"`, "Status"},
+		{`'In Stock'`, "In Stock"},
+		{`“Release Date”`, "Release Date"},
+		{`‘Category’`, "Category"},
+		{" Status ", "Status"},
+		{"plain", "plain"},
+	}
+
+	for _, tc := range tests {
+		if got := trimQuotes(tc.input); got != tc.want {
+			t.Fatalf("trimQuotes(%q) = %q, want %q", tc.input, got, tc.want)
 		}
 	}
 }

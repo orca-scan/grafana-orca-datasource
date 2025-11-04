@@ -10,18 +10,12 @@ type QueryRange struct {
 	To   *string `json:"to"`
 }
 
-type Filter struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
 type OrcaQuery struct {
 	RefID     string     `json:"refId"`
 	SheetID   string     `json:"sheetId"`
 	Limit     int        `json:"limit"`
 	Skip      int        `json:"skip"`
 	TimeField string     `json:"timeField"`
-	Filters   []Filter   `json:"filters"`
 	Range     QueryRange `json:"range"`
 }
 

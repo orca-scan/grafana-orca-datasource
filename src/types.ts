@@ -16,7 +16,6 @@ export interface OrcaQuery extends DataQuery {
   limit?: number;
   skip?: number;
   timeField?: string;
-  filters?: Array<{ key: string; value: string }>;
   range?: { from?: string; to?: string };
 }
 
