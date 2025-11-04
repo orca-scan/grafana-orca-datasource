@@ -4,129 +4,184 @@
 ![Grafana](https://img.shields.io/badge/Grafana-%3E%3D10.4.0-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 
-Plugin ID: `orcascan-orcascan-datasource`
+## What this project is
 
-The Orca Scan data source lets Grafana users visualise live barcode capture data without leaving the Orca ecosystem. Authenticate with your Orca API key, pick a sheet, select the time field you care about, and you are ready to build dashboards.
+`orcascan-orcascan-datasource` is the officially supported, open-source Grafana data source for [Orca Scan](https://orcascan.com). It lets any Grafana instance query Orca Scan sheets over secure API calls so barcode activity, inventory, and field updates can be analysed alongside the rest of your observability stack.
 
----
+Goals in one sentence:
+- **For Grafana admins:** install the plugin, paste an Orca API key, pick a sheet, build dashboards.
+- **For maintainers:** keep a transparent, reproducible codebase that speaks directly to the Orca Scan REST API using the Grafana Plugin SDK.
 
-## Features
-- **Sheet discovery** – list available sheets and fields directly from the Orca API.
-- **Secure API key auth** – Grafana stores the key in its encrypted secrets store.
-- **Time-series ready** – timestamps are normalised so Grafana’s time range picker works out of the box.
-- **Smart numbers** – text fields that contain numbers are coerced to numeric types so you can calculate totals and averages.
-- **Geo support** – GPS columns are expanded into latitude and longitude fields for Geomap visualisations.
+The code is MIT licensed and structured so any developer can clone the repo, bootstrap the toolchain, and run the full stack locally without surprises.
 
----
+## Local setup (zero-to-hero)
 
-## Try it
+This checklist is what we hand to every new teammate. Follow it in order and you will be querying Orca Scan data from a local Grafana instance in minutes.
 
-- Import `provisioning/dashboards/orca-scan-sample.json` into Grafana once your Orca Scan data source is configured. Replace the placeholder sheet ID and time field in the sample query with values from your workspace.
-- Want it to appear automatically? Map `./provisioning` to `/etc/grafana/provisioning` in your Grafana container so the sample dashboard ships pre-loaded.
+### 1. Prerequisites
 
----
+| Tool | Version | Why |
+| --- | --- | --- |
+| Node.js | 22.x | Compile the React frontend (`npm ci`, `npm run build`). |
+| npm | 10.x | Ships with Node 22; used for scripts and validator. |
+| Go | 1.24.6 | Required by Grafana Plugin SDK `v0.281.0`. |
+| Docker & Docker Compose | Latest | Runs Grafana locally identical to production. |
+| Orca Scan API key | Business plan or higher | Grants access to real sheets during testing. |
 
-## Getting Started
+Install tooling the standard way (`nvm install 22`, `brew install go@1.24`, `brew install --cask docker`, etc.). Confirm versions:
 
-1. **Prepare your API key**
-   - Log in to Orca Scan and create an API key with access to the sheets you want to expose.
+```bash
+node -v      # v22.x
+npm -v       # 10.x
+go version   # go1.24.6
+```
 
-2. **Install the plugin**
-   - Clone this repository and build locally (see the Development section), or install the signed release in Grafana.
+### 2. Clone the repository
 
-3. **Add the data source in Grafana**
-   - Navigate to *Connections → Data sources → Add data source → Orca Scan*.
-   - Paste your API key and click **Save & test** – you should see “Connection successful. Orca Scan data source is ready to use.”
+```bash
+git clone https://github.com/orca-scan/grafana-orca-datasource.git
+cd grafana-orca-datasource/orcascan-orcascan-datasource
+# optional: add the private remote if you push internally
+# git remote add orca git@github.com:orca-scan/grafana-orca-datasource.git
+```
 
-4. **Build dashboards**
-   - Select the sheet you want to query, choose an optional time field, and apply any transformations you need inside Grafana.
-   - Optional: import the sample dashboard from `provisioning/dashboards/orca-scan-sample.json` (or mount `./provisioning` for auto-provisioning) to get a ready-made table panel you can tweak.
-
----
-
-## Overview
-
-The Orca Scan data source plugin connects your Orca Scan sheets to Grafana so you can visualise barcode activity, inventory levels, and field updates alongside the rest of your monitoring stack. Authenticate with an API key, pick a sheet, and start exploring your data within minutes.
-
-## Project status
-
-This plugin is under active development. We are prioritising the most common Orca Scan workflows first (sheet browsing, time-series dashboards, inventory tables). If you encounter issues or have feature requests, please reach out through the support channels listed below. Feedback helps us plan the next iteration.
-
-## See also
-
-- [Technical documentation](https://orcascan.com/guides/rest-api-f09a21c3)
-- [License](./LICENSE)
-
----
-
-## Development Workflow
+### 3. Install dependencies and build once
 
 ```bash
 nvm use 22
 npm ci
-npm run build              # frontend bundle
+npm run build
 
-GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg
-
-docker compose up -d       # spins up Grafana with the plugin mounted
+go run github.com/magefile/mage@v1.15.0 build:linux
+mv dist/gpx_orca_scan_linux_amd64 dist/gpx_orca_scan
 ```
 
-- Grafana UI: http://localhost:3000 (admin/admin)
-- Rebuild backend or frontend and restart Grafana when changes are made:
+Those commands populate `node_modules/`, emit the frontend bundle, and build a Linux/amd64 backend binary (Grafana runs on Linux). The rename to `gpx_orca_scan` is required—Grafana executes that filename.
 
-  ```bash
-  docker compose restart grafana
-  ```
+### 4. Launch Grafana with the plugin mounted
 
-- To auto-provision the sample dashboard during local development, add this volume to `docker-compose.yaml`:
+```bash
+open -a Docker   # ensure Docker Desktop is running
+docker compose up -d
+```
 
-  ```yaml
-  volumes:
-    - ./provisioning:/etc/grafana/provisioning
-  ```
+Grafana starts on [http://localhost:3000](http://localhost:3000) (credentials `admin/admin`) and loads the plugin straight from `dist/`.
 
-- Quick sanity check inside the container:
+### 5. Configure the Orca Scan data source
 
-  ```bash
-  docker exec orcascan-orcascan-datasource-grafana-1 \
-    ls -l /var/lib/grafana/plugins/orcascan-orcascan-datasource
-  ```
+1. In Grafana go to **Connections → Data sources → Add data source → Orca Scan**.
+2. Paste an Orca API key under **Secure JSON Data → API key**.
+3. Click **Save & test** and expect the “pong” message.
+4. Optional: import `provisioning/dashboards/orca-scan-sample.json` (or mount `./provisioning:/etc/grafana/provisioning`) to load the sample dashboard.
+5. Edit the sample panel to swap in your sheet ID and time field, then run the query.
 
----
+Restart Grafana after every backend rebuild:
 
-## Repository Layout
+```bash
+docker compose restart grafana
+```
 
-| Path | Description |
+### 6. Day-to-day development
+
+| Action | Command |
 | --- | --- |
-| `pkg/` | Go backend handlers for `/resources/*` requests. |
-| `src/` | React/TypeScript frontend (config editor, query editor, datasource logic). |
-| `dist/` | Bundled plugin that Grafana loads. |
-| `docker-compose.yaml` | Local Grafana instance mounting `dist/`. |
+| Frontend hot reload | `npm run dev` |
+| Frontend tests | `npm run test:ci` |
+| Frontend lint & types | `npm run lint` · `npm run typecheck` |
+| Backend rebuild (Linux target) | `go run github.com/magefile/mage@v1.15.0 build:linux` |
+| Backend tests | `go test ./pkg/...` or `go run github.com/magefile/mage@v1.15.0 coverage` |
 
----
+### 7. Package for review or release
 
-## Helpful Links
+```bash
+npm run build
+go run github.com/magefile/mage@v1.15.0 build:linux
+mv dist/gpx_orca_scan_linux_amd64 dist/gpx_orca_scan
+mkdir -p package/orcascan-orcascan-datasource
+cp -R dist/. package/orcascan-orcascan-datasource/
+(cd package && zip -r ../orcascan-orcascan-datasource-<version>.zip orcascan-orcascan-datasource)
+shasum -a 1 orcascan-orcascan-datasource-<version>.zip
+npx @grafana/plugin-validator@latest orcascan-orcascan-datasource-<version>.zip
+```
 
-- Documentation: https://orcascan.com/guides/rest-api-f09a21c3
-- Support & contact: https://orcascan.com/contact
-- GitHub repository: https://github.com/orca-scan/grafana-orca-datasource
-- Raise an issue: https://github.com/orca-scan/grafana-orca-datasource/issues
-- Orca Scan homepage: https://orcascan.com
+Replace `<version>` with the value in `src/plugin.json`. Upload the ZIP to GitHub Releases and submit the SHA1 when handing the build to Grafana for review.
 
----
+## How it works (end-to-end)
 
-## Publishing Checklist
+1. Grafana loads the plugin bundle from `dist/`.
+2. The React frontend (`src/`) uses `getBackendSrv()` to call `/api/datasources/uid/<uid>/resources/*`.
+3. The Go backend (`pkg/`) serves those resource routes, validates the API key, and calls the Orca Scan REST API (`https://api.orcascan.com/v1`).
+4. Responses are reshaped into Grafana data frames (tables or time series). Numeric detection, time parsing, and GPS splitting happen here.
+5. Grafana renders the result; cached metadata keeps follow-up queries fast.
 
-1. `npm run build`
-2. `GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg`
-3. `npm run sign` with your Grafana access policy token
-4. `npm version <major|minor|patch>` and `git push --follow-tags`
-5. Upload the signed zip to Grafana for review or distribute privately.
+Conceptual diagram:
 
-Refer to Grafana’s [publishing guide](https://grafana.com/developers/plugin-tools/publish-a-plugin/) for detailed steps.
+```
+Grafana UI (React) ─┬─┬─> /resources/ping  → Go backend → Orca Scan API
+                    │ │
+                    │ └─> /resources/sheets → list sheets & fields
+                    └───> /resources/query  → rows → Grafana data frames
+```
 
----
+## Repository layout
 
-## Need Help?
+| Path | Purpose |
+| --- | --- |
+| `src/` | TypeScript/React UI (datasource class, config editor, query editor, shared types, static assets). |
+| `pkg/` | Go backend implementing Grafana Plugin SDK handlers and Orca REST integration. |
+| `pkg/models/` | Settings and query structs shared across the boundary. |
+| `provisioning/` | Sample dashboard that demonstrates the plugin. |
+| `dist/` | Build output consumed by Grafana. |
+| `docker-compose.yaml` | Local Grafana instance wired to load the plugin from `dist/`. |
+| `Magefile.go` | Delegates to Grafana SDK mage targets (build, test, manifest). |
 
-If you run into issues configuring the plugin, drop us a line at [Orca Scan Support](https://orcascan.com/contact) or open a GitHub issue. We are happy to help you get from barcode scans to Grafana dashboards.
+## Understanding the code
+
+### Backend (`pkg/`)
+
+- `main.go` registers the datasource service, query handler, health check, and resource endpoints (`/ping`, `/sheets`, `/fields`, `/query`).
+- `handleSheets`, `handleFields`, `handleQuery` forward authenticated requests to Orca Scan and normalise the responses.
+- Helpers detect numeric strings, parse timestamps, and expand GPS fields into `<field>_lat`/`<field>_lon` columns.
+- Tests: `go test ./pkg/...` or `go run github.com/magefile/mage@v1.15.0 coverage`.
+
+### Frontend (`src/`)
+
+- `datasource.ts` extends Grafana’s `DataSourceApi` and bridges to the backend resource endpoints.
+- `components/ConfigEditor.tsx` captures API key, sheet selection, and time field.
+- `components/QueryEditor.tsx` models filters, pagination, and preview data.
+- `types.ts` defines the shared shapes (`OrcaQuery`, `OrcaFieldInfo`, etc.) to keep TS and Go aligned.
+- `img/sheet-dashboard.png` plus `src/README.md` supply Grafana catalog assets.
+
+### Why open source?
+
+- **Transparency:** reviewers can audit how credentials are handled and how data is transformed.
+- **Maintainability:** CI/CD and release steps are reproducible; community patches can be merged confidently.
+- **Extensibility:** the Orca API evolves quickly, and this plugin provides a template for new endpoints or custom transformations without distributing opaque binaries.
+
+## Common tasks
+
+| Task | Command |
+| --- | --- |
+| Type check frontend | `npm run typecheck` |
+| Lint | `npm run lint` |
+| Run frontend tests | `npm run test:ci` |
+| Run backend tests | `go test ./pkg/...` or `go run github.com/magefile/mage@v1.15.0 coverage` |
+| Rebuild backend for macOS (debugging) | `go run github.com/magefile/mage@v1.15.0 build:darwinARM64` |
+| Clean build artefacts | `go run github.com/magefile/mage@v1.15.0 clean` |
+
+## Troubleshooting checklist
+
+- **404 on Save & Test**: Ensure `dist/gpx_orca_scan` is Linux/amd64—Grafana inside Docker cannot execute macOS binaries.
+- **“Unexpected token 'o'” in Grafana UI**: The backend returned plain text. Confirm `GOOS=linux GOARCH=amd64` builds and that `plugin.json` points to `gpx_orca_scan`.
+- **Go manifest mismatch during submission**: Rebuild the backend with `mage build:linux` after editing Go code so `go_plugin_build_manifest` hashes align.
+- **Screenshot missing warning**: Keep `src/img/sheet-dashboard.png` committed; it is copied into `dist/img/` during `npm run build`.
+- **API key rejected**: Orca REST keys are available on Business plans or higher. Validate with `curl -H "Authorization: Bearer <KEY>" https://api.orcascan.com/v1/sheets`.
+
+## Support and feedback
+
+- Documentation: <https://orcascan.com/guides/rest-api-f09a21c3>
+- Support: <https://orcascan.com/contact>
+- Issues & feature requests: <https://github.com/orca-scan/grafana-orca-datasource/issues>
+- License: [MIT](./LICENSE)
+
+If you extend the plugin (new filters, alerting support, sheet caching strategies, etc.), open a pull request so the wider Orca community benefits.
