@@ -119,7 +119,7 @@ Upload the ZIP to GitHub Releases and paste both the download URL and SHA1 into 
 1. **Plugin load** – Grafana reads `dist/plugin.json` and spins up the React bundle plus the `dist/gpx_orca_scan` Go backend.
 2. **Frontend requests** – `src/datasource.ts` calls Grafana’s proxy endpoints (e.g. `/api/datasources/uid/<uid>/resources/ping`, `/resources/sheets`, `/resources/fields`, `/resources/query`). Grafana forwards those calls to the backend binary.
 3. **Backend routing** – `pkg/main.go` handles the `/ping`, `/sheets`, `/fields`, and `/query` routes. It pulls the decrypted API key from Grafana, then talks to the Orca Scan REST API (`GET /v1/sheets`, `/v1/sheets/{id}/fields`, `/v1/sheets/{id}/rows`).
-4. **Data shaping** – Orca's field metadata is respected: numeric/date/boolean/gps types stay as declared. Only string fields are re-checked against row samples; if every value parses cleanly as number/boolean/time/GPS we promote that type so Grafana can chart it. GPS values keep their original string and gain `<field>_lat`/`<field>_lon` helper columns, and we record decimal precision for sensible formatting.
+4. **Data shaping** – Orca's field metadata is respected: numeric/date/boolean/gps types stay as declared. Only string fields are re-checked against every value returned in the current query; if each entry parses cleanly as number/boolean/time/GPS we promote that type so Grafana can chart it. GPS values keep their original string and gain `<field>_lat`/`<field>_lon` helper columns, and we record decimal precision for sensible formatting.
 5. **Frames to UI** – The backend returns rows plus descriptors; the frontend converts them into Grafana data frames, applies client-side equality filters from `QueryEditor`, and honours the chosen time field.
 6. **Dashboard render** – Grafana caches sheet/field metadata and renders panels. Re-queries reuse cache until TTL expiry or manual refresh.
 
@@ -144,7 +144,7 @@ Upload the ZIP to GitHub Releases and paste both the download URL and SHA1 into 
 
 - **Plugin bootstrap** (`pkg/main.go`) – starts the datasource service, sets up resource routes, and provides `QueryData`/`CheckHealth` handlers via the Grafana Plugin SDK.
 - **Resource handlers** – `/ping`, `/sheets`, `/fields`, `/query` live in `pkg/main.go`. Each pulls the secure API key from `backend.PluginContext`, calls Orca, and marshals the response back to Grafana.
-- **Field typing & caching** – `fetchFields` caches Orca field definitions per sheet. Initial types come from Orca metadata; `detectKindFromRows` only promotes plain text fields when sample rows consistently parse as number/boolean/time/GPS.
+- **Field typing & caching** – `fetchFields` caches Orca field definitions per sheet. Initial types come from Orca metadata; `detectKindFromRows` only promotes plain text fields when every returned value consistently parses as number/boolean/time/GPS.
 - **Row pipeline** – `handleQuery` uses `expandGeoColumns`, `normalizeRows`, and `applyClientFilters` to add helper columns, coerce values, and apply equality filters before returning rows + descriptors to the frontend.
 - **Tests** – execute with `go test ./pkg/...` or `go run github.com/magefile/mage@v1.15.0 coverage`.
 

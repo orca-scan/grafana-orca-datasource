@@ -100,8 +100,6 @@ type fieldDescriptor struct {
 	hasDecimals bool
 }
 
-const detectionSampleLimit = 200
-
 type geoColumnInfo struct {
 	latDecimals int
 	lonDecimals int
@@ -620,17 +618,14 @@ func detectKindFromRows(key string, rows []map[string]any, current fieldKind) fi
 	boolean := true
 	timeLike := true
 	geoLike := true
-	evaluated := 0
-
+	seenValue := false
 	for _, row := range rows {
-		if evaluated >= detectionSampleLimit {
-			break
-		}
-
 		val, ok := row[key]
 		if !ok || val == nil {
 			continue
 		}
+
+		seenValue = true
 
 		if numeric && !isNumericValue(val) {
 			numeric = false
@@ -645,14 +640,12 @@ func detectKindFromRows(key string, rows []map[string]any, current fieldKind) fi
 			geoLike = false
 		}
 
-		evaluated++
-
 		if !numeric && !boolean && !timeLike && !geoLike {
 			break
 		}
 	}
 
-	if evaluated == 0 {
+	if !seenValue {
 		return current
 	}
 	if numeric {
