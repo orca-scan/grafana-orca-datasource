@@ -1,6 +1,6 @@
 # Orca Scan
 
-![Version](https://img.shields.io/badge/version-1.0.7-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0.8-blue?style=flat-square)
 ![Grafana](https://img.shields.io/badge/Grafana-%3E%3D10.4.0-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 
@@ -15,14 +15,9 @@ Monitor your Orca Scan sheets directly from Grafana. Use your API key once, pick
 - Time-series readiness for timestamped sheets
 - Numeric and geo fields normalised for panels, alerts, and maps
 
-## Try it
-
-- Import `provisioning/dashboards/orca-scan-sample.json` into Grafana after configuring the data source. Replace the placeholder sheet ID and time field with values from your own workspace.
-- Prefer an automatic setup? Map `./provisioning` to `/etc/grafana/provisioning` in your Grafana instance so the sample ships pre-loaded.
-
 ## Current status
 
-The plugin is in active development. Core scenarios—sheet browsing, table views, and time-series dashboards—are ready for everyday use. We iterate in public, so if something is missing, reach out via the support links below.
+The plugin is in active development. Core scenarios such as sheet browsing, table views, and time-series dashboards are ready for everyday use. We iterate in public, so if something is missing, reach out via the support links below.
 
 ## Helpful links
 
