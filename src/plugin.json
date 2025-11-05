@@ -50,8 +50,8 @@
         "path": "img/sheet-dashboard.png"
       }
     ],
-    "version": "1.0.7",
-    "updated": "2025-11-03"
+    "version": "1.0.8",
+    "updated": "2025-11-04"
   },
   "dependencies": {
     "grafanaDependency": ">=10.4.0",

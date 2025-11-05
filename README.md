@@ -1,6 +1,6 @@
 # Orca Scan Grafana Data Source
 
-![Version](https://img.shields.io/badge/version-1.0.7-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0.8-blue?style=flat-square)
 ![Grafana](https://img.shields.io/badge/Grafana-%3E%3D10.4.0-orange?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 
