@@ -75,7 +75,8 @@
     "react-dom": "18.2.0"
   },
   "overrides": {
-    "path-parse": "1.0.7"
+    "path-parse": "1.0.7",
+    "available-typed-arrays": "1.0.7"
   },
   "packageManager": "npm@10.8.2"
 }
