@@ -17,11 +17,18 @@ permissions:
 jobs:
   compare:
     runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_FETCH_RETRIES: 5
+      NPM_CONFIG_FETCH_RETRY_FACTOR: 10
+      NPM_CONFIG_CACHE_MAX: 0
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Prepare npm cache
+        run: npm cache clean --force
 
       - uses: grafana/plugin-actions/bundle-size@cd04489925dbcaeb7c86ba8ace7a37b8edb4192b # bundle-size/v1.0.3
