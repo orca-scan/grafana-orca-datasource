@@ -32,6 +32,8 @@ dist/
 artifacts/
 work/
 ci/
+package/
+orcascan-orcascan-datasource-*.zip
 
 # e2e test directories
 /test-results/
