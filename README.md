@@ -82,8 +82,7 @@ Grafana starts on [http://localhost:3000](http://localhost:3000) (credentials `a
 2. Click **Add new data source** to open the configuration screen.
 3. On the **Settings** tab, paste your Orca API key into the **API key** field.
 4. Click **Save & test** and expect “Connection successful. Orca Scan data source is ready to use.”
-5. Optional: import `provisioning/dashboards/orca-scan-sample.json` (or mount `./provisioning:/etc/grafana/provisioning`) to load the sample dashboard.
-6. Edit the sample panel to swap in your sheet ID and time field, then run the query.
+5. From there you can click **Building a dashboard** to create panels, or switch to **Explore** to test queries immediately—select your sheet, run the query, and start visualising.
 
 Restart Grafana after every backend rebuild:
 
