@@ -34,7 +34,21 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm cache verify || npm cache clean --force
+          attempts=0
+          until [ $attempts -ge 3 ]
+          do
+            npm ci --fetch-retries=5 --fetch-retry-factor=10 && break
+            attempts=$((attempts+1))
+            echo "npm ci failed (attempt $attempts/3); retrying after clearing cache..."
+            npm cache clean --force || true
+            sleep $((attempts*5))
+          done
+          if [ $attempts -ge 3 ]; then
+            echo "npm ci failed after multiple attempts"
+            exit 1
+          fi
 
       - name: Check types
         run: npm run typecheck
