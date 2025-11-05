@@ -15,6 +15,13 @@ Monitor your Orca Scan sheets directly from Grafana. Use your API key once, pick
 - Time-series readiness for timestamped sheets
 - Numeric and geo fields normalised for panels, alerts, and maps
 
+## Getting started
+
+1. Click **Add new data source** in Grafana and select the Orca Scan data source card.
+2. On the Settings tab, paste your Orca API key into the API key field.
+3. Click **Save & test**. You should see “Connection successful. Orca Scan data source is ready to use.”
+4. Build a dashboard or open Explore to run queries. Pick your sheet, run the query, and start visualising your data.
+
 ## Current status
 
 The plugin is in active development. Core scenarios such as sheet browsing, table views, and time-series dashboards are ready for everyday use. We iterate in public, so if something is missing, reach out via the support links below.
