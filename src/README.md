@@ -17,7 +17,7 @@ Monitor your Orca Scan sheets directly from Grafana. Use your API key once, pick
 
 ## Getting started
 
-1. Click **Add new data source** in Grafana and select the Orca Scan data source card.
+1. Click **Add new data source**.
 2. On the Settings tab, paste your Orca API key into the API key field.
 3. Click **Save & test**. You should see “Connection successful. Orca Scan data source is ready to use.”
 4. Build a dashboard or open Explore to run queries. Pick your sheet, run the query, and start visualising your data.
