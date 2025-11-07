@@ -2,7 +2,6 @@
 
 Connect Orca Scan sheets to Grafana. Paste an Orca REST API key, choose a sheet, and display the rows inside Grafana panels.
 
-<img src="/public/plugins/orcascan-orcascan-datasource/img/sheet-dashboard.png" alt="Inventory overview" width="100%" />
 
 ## Table of contents
 
@@ -18,12 +17,13 @@ Connect Orca Scan sheets to Grafana. Paste an Orca REST API key, choose a sheet,
 
 ## Installation
 
-1. Download the latest release from https://github.com/orca-scan/grafana-orca-datasource/releases.
-2. Extract `orcascan-orcascan-datasource-<version>.zip` into the Grafana plugins directory.  
-   - Linux package: `/var/lib/grafana/plugins`  
-   - Docker: mount the extracted directory to `/var/lib/grafana/plugins`
-3. Set `GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=orcascan-orcascan-datasource` (or add the same setting to `grafana.ini`).
-4. Restart Grafana.
+1. Install Grafana on macOS: `brew install grafana` then `brew services start grafana`.
+2. Download the latest release from https://github.com/orca-scan/grafana-orca-datasource/releases.
+3. Extract `orcascan-orcascan-datasource-<version>.zip` into `/usr/local/var/lib/grafana/plugins` (create this directory if needed).
+4. Allow the plugin by running `export GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=orcascan-orcascan-datasource` before restarting Grafana, or add `allow_loading_unsigned_plugins = orcascan-orcascan-datasource` under `[plugins]` in `/usr/local/etc/grafana/grafana.ini`.
+5. Restart Grafana: `brew services restart grafana`.
+6. Optional (build from source): clone this repo, run `npm ci && npm run build`, run `GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg`, and copy `dist/` into `/usr/local/var/lib/grafana/plugins/orcascan-orcascan-datasource`.
+7. Optional (Docker, alternative to steps 1–5): run `docker compose up -d` from this repo. This starts Grafana in a container with `./dist` mounted into `/var/lib/grafana/plugins/orcascan-orcascan-datasource` and exposes Grafana on http://localhost:3000.
 
 ## Configuration
 
@@ -54,16 +54,16 @@ Connect Orca Scan sheets to Grafana. Paste an Orca REST API key, choose a sheet,
 .
 ├── src
 │   ├── components
-│   │   ├── ConfigEditor.tsx       # API key entry
-│   │   └── QueryEditor.tsx        # sheet selector and time field input
-│   ├── datasource.ts              # frontend datasource logic
-│   ├── module.ts                  # Grafana registration
-│   └── plugin.json                # plugin metadata copied to dist
+│   │   ├── ConfigEditor.tsx       # UI where the Orca API key is stored
+│   │   └── QueryEditor.tsx        # UI where the sheet and time field are selected
+│   ├── datasource.ts              # calls backend resources, maps rows to Grafana data frames
+│   ├── module.ts                  # registers the datasource so Grafana can load it
+│   └── plugin.json                # plugin metadata bundled into dist
 ├── pkg
-│   ├── main.go                    # backend entry point and resource handlers
-│   └── models                     # shared structures
-├── dist                           # built frontend bundle + backend binary
-└── docker-compose.yaml            # local Grafana container
+│   ├── main.go                    # Go backend that calls the Orca API and serves /resources/*
+│   └── models                     # shared Go structures for settings and query payloads
+├── dist                           # built frontend bundle + backend binary that Grafana executes
+└── docker-compose.yaml            # local Grafana container mounting ./dist
 ```
 
 ## Development
@@ -72,14 +72,14 @@ Connect Orca Scan sheets to Grafana. Paste an Orca REST API key, choose a sheet,
 git clone https://github.com/orca-scan/grafana-orca-datasource
 cd grafana-orca-datasource
 npm ci
-npm run dev            # frontend hot reload
+npm run dev
 GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg
-docker compose up -d   # run Grafana locally with the plugin mounted
+docker compose up -d
 ```
 
-- `npm run build` compiles the production frontend bundle into `dist/`.
-- `npm run lint`, `npm run typecheck`, `npm run test:ci` cover checks.
-- `go test ./pkg/...` executes backend tests.
+- `npm run build` creates the production bundle in `dist/`.
+- `npm run lint`, `npm run typecheck`, `npm run test:ci` run frontend checks.
+- `go test ./pkg/...` runs backend tests.
 
 ## Packaging
 
