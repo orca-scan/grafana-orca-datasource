@@ -1,6 +1,6 @@
 # Orca Scan Grafana Data Source
 
-Connect Orca Scan sheets to Grafana. Paste an Orca REST API key, choose a sheet, and display the rows inside Grafana panels.
+Connect Orca Scan sheets to Grafana. Paste your Orca Scan REST API key, choose a sheet, and display the rows inside Grafana panels.
 
 
 ## Table of contents
@@ -58,7 +58,7 @@ docker compose up -d
 
 1. In Grafana open Connections → Data sources → Add new data source.
 2. Select Orca Scan.
-3. Paste an Orca API key (create one in Orca Scan under Account → REST API).
+3. Paste your Orca Scan API key (Orca Scan → Account Settings → API Key → Copy).
 4. Click Save and test. The datasource is ready when Grafana reports success.
 
 ## Query
@@ -83,13 +83,13 @@ docker compose up -d
 .
 ├── src
 │   ├── components
-│   │   ├── ConfigEditor.tsx       # UI where the Orca API key is stored
+│   │   ├── ConfigEditor.tsx       # UI where the Orca Scan API key is stored
 │   │   └── QueryEditor.tsx        # UI where the sheet and time field are selected
 │   ├── datasource.ts              # calls backend resources, maps rows to Grafana data frames
 │   ├── module.ts                  # registers the datasource so Grafana can load it
 │   └── plugin.json                # plugin metadata bundled into dist
 ├── pkg
-│   ├── main.go                    # Go backend that calls the Orca API and serves /resources/*
+│   ├── main.go                    # Go backend that calls the Orca Scan REST API and serves /resources/*
 │   └── models                     # shared Go structures for settings and query payloads
 ├── dist                           # built frontend bundle + backend binary that Grafana executes
 └── docker-compose.yaml            # local Grafana container mounting ./dist
