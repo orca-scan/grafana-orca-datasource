@@ -127,4 +127,4 @@ docker compose up -d
 
 ## Licence
 
-[Apache License 2.0](LICENSE) © Orca Scan – a [barcode app](https://orcascan.com) with [barcode tracking APIs](https://orcascan.com/guides?tag=for-developers).
+[MIT License](LICENSE) © Orca Scan – a [barcode app](https://orcascan.com) with [barcode tracking APIs](https://orcascan.com/guides?tag=for-developers).
