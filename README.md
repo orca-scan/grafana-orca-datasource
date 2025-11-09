@@ -127,4 +127,4 @@ docker compose up -d
 
 ## Licence
 
-[MIT Licence](LICENSE) © Orca Scan, the barcode scanner app for iOS, Android and the web.
+[Apache License 2.0](LICENSE) © Orca Scan – a [barcode app](https://orcascan.com) with [barcode tracking APIs](https://orcascan.com/guides?tag=for-developers).
