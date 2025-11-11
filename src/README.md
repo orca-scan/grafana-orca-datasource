@@ -2,7 +2,6 @@
 
 Connect Orca Scan sheets to Grafana. Paste your Orca Scan REST API key, choose a sheet, and display the rows inside Grafana panels.
 
-
 ## Table of contents
 
 - [Installation](#installation)
@@ -15,49 +14,50 @@ Connect Orca Scan sheets to Grafana. Paste your Orca Scan REST API key, choose a
 - [Support](#support)
 - [Licence](#licence)
 
-## Installation
+## Installation (macOS, Docker)
 
-```
-Install Grafana (macOS)
------------------------
-brew install grafana
-brew services start grafana
+Follow these steps once on a Mac to run Grafana and the Orca Scan plugin via Docker.
 
-Install the plugin
-------------------
-curl -LO https://github.com/orca-scan/grafana-orca-datasource/releases/download/<version>/orcascan-orcascan-datasource-<version>.zip
-mkdir -p /usr/local/var/lib/grafana/plugins
-unzip orcascan-orcascan-datasource-<version>.zip -d /usr/local/var/lib/grafana/plugins
+1. **Install prerequisites.**
+   - Install Homebrew if you do not already have it:
+     ```bash
+     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+     ```
+   - Install Docker Desktop via Homebrew and start it:
+     ```bash
+     brew install --cask docker
+     open -a Docker
+     ```
+   - Install Node.js and Go via Homebrew (needed for local builds):
+     ```bash
+     brew install node
+     brew install go
+     ```
 
-Allow unsigned plugins
-----------------------
-export GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=orcascan-orcascan-datasource
-# or edit /usr/local/etc/grafana/grafana.ini
-# [plugins]
-# allow_loading_unsigned_plugins = orcascan-orcascan-datasource
+2. **Clone the repo and install dependencies.**
+   ```bash
+   git clone https://github.com/orca-scan/grafana-orca-datasource
+   cd grafana-orca-datasource
+   npm ci
+   ```
 
-Restart Grafana
----------------
-brew services restart grafana
+3. **Build the plugin bundle (frontend + backend).**
+   ```bash
+   npm run build
+   GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg
+   ```
 
-Optional: build from source
----------------------------
-git clone https://github.com/orca-scan/grafana-orca-datasource
-cd grafana-orca-datasource
-npm ci && npm run build
-GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg
-cp -R dist/* /usr/local/var/lib/grafana/plugins/orcascan-orcascan-datasource
+4. **Run Grafana using Docker Compose.**
+   ```bash
+   docker compose up -d
+   ```
+   This starts Grafana on http://localhost:3000 with the Orca Scan plugin mounted from `./dist` and `GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS` already set inside the container.
 
-Optional: Docker (alternative to brew install)
-----------------------------------------------
-docker compose up -d
-# Grafana listens on http://localhost:3000 and mounts ./dist into /var/lib/grafana/plugins/orcascan-orcascan-datasource
-```
 
 ## Configuration
 
-1. In Grafana open Connections → Data sources → Add new data source.
-2. Select Orca Scan.
+1. Open http://localhost:3000 (default user `admin`, password `admin`).
+2. Go to Connections → Data sources → Add new data source and select Orca Scan.
 3. Paste your Orca Scan API key (Orca Scan → Account Settings → API Key → Copy).
 4. Click Save and test. The datasource is ready when Grafana reports success.
 
@@ -98,17 +98,14 @@ docker compose up -d
 ## Development
 
 ```bash
-git clone https://github.com/orca-scan/grafana-orca-datasource
-cd grafana-orca-datasource
-npm ci
 npm run dev
-GOOS=linux GOARCH=amd64 go build -o dist/gpx_orca_scan ./pkg
-docker compose up -d
+npm run lint
+npm run typecheck
+npm run test:ci
+GOOS=linux GOARCH=amd64 go test ./pkg/...
 ```
 
 - `npm run build` creates the production bundle in `dist/`.
-- `npm run lint`, `npm run typecheck`, `npm run test:ci` run frontend checks.
-- `go test ./pkg/...` runs backend tests.
 
 ## Packaging
 
